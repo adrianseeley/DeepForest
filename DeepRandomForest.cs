@@ -44,8 +44,12 @@ public class DeepRandomForest
                     Console.WriteLine($"DRF Inner Layer: {layerIndex}/{layers - 2}, Forest: {forestIndex}/{forestsPerLayer - 1}");
                 }
 
+                // choose x component count
+                int xComponentCount = (int)Math.Floor(((float)forestIndex) / ((float)forestsPerLayer) * ((float)samples[0].input.Count));
+                xComponentCount = Math.Min(Math.Max(1, xComponentCount), samples[0].input.Count);
+
                 // create a random forest for this layer
-                RandomForest randomForest = new RandomForest(trainingSamples, yComponent, treesPerForest, extraRandom);
+                RandomForest randomForest = new RandomForest(trainingSamples, yComponent, xComponentCount, treesPerForest, extraRandom);
                 randomForestLayer.Add(randomForest);
             }
 
@@ -85,7 +89,7 @@ public class DeepRandomForest
         }
 
         // create the last random forest layer (which is only a single forest)
-        RandomForest lastRandomForest = new RandomForest(trainingSamples, yComponent, treesPerForest, extraRandom);
+        RandomForest lastRandomForest = new RandomForest(trainingSamples, yComponent, samples[0].input.Count, treesPerForest, extraRandom);
         randomForestLayers.Add(new List<RandomForest>() { lastRandomForest });
     }
 

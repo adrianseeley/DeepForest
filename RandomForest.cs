@@ -3,7 +3,7 @@ public class RandomForest
     public int yComponent;
     public List<RandomTree> randomTrees;
 
-    public RandomForest(List<(List<float> input, List<float> output)> samples, int yComponent, int treeCount, bool extraRandom)
+    public RandomForest(List<(List<float> input, List<float> output)> samples, int yComponent, int xComponentCount, int treeCount, bool extraRandom)
     {
         // confirm we have samples to work with
         if (samples.Count == 0)
@@ -40,7 +40,7 @@ public class RandomForest
             }
 
             // randomly choose a number of x components from 1 to all
-            int xComponentCount = random.Next(1, allXComponents.Length + 1);
+            //int xComponentCount = random.Next(1, allXComponents.Length + 1);
 
             // randomly shuffle the x components and take the first xComponentCount
             List<int> randomXComponents = allXComponents.OrderBy(x => random.Next()).Take(xComponentCount).ToList();
