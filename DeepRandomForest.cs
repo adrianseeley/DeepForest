@@ -60,12 +60,18 @@ public class DeepRandomForest
                 int localSampleIndex = sampleIndex;
                 (List<float> input, List<float> output) trainingSample = trainingSamples[localSampleIndex];
 
+                // dont concat output to new input
+                List<float> newInput = new List<float>();
+
                 // for each forest in the previous layer
                 foreach (RandomForest randomForest in randomForestLayer)
                 {
                     // add the prediction of the forest to the input of this training sample (concat)
-                    trainingSample.input.Add(randomForest.Predict(trainingSample.input));
+                    newInput.Add(randomForest.Predict(trainingSample.input));
                 }
+
+                // replace input
+                trainingSamples[localSampleIndex] = (newInput, trainingSample.output);
 
                 if (verbose)
                 {
@@ -103,12 +109,16 @@ public class DeepRandomForest
             // get the random forest layer at the current index
             List<RandomForest> randomForestLayer = randomForestLayers[layerIndex];
 
+            List<float> nextInput = new List<float>();
+
             // iterate through all the forests in the layer
             foreach (RandomForest randomForest in randomForestLayer)
             {
                 // add the prediction of the forest to the input (concat)
-                predictInput.Add(randomForest.Predict(predictInput));
+                nextInput.Add(randomForest.Predict(predictInput));
             }
+
+            predictInput = nextInput;
         }
 
         // get the last random forest layer
