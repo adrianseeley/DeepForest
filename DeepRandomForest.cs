@@ -45,8 +45,7 @@ public class DeepRandomForest
                 }
 
                 // choose x component count
-                int xComponentCount = (int)Math.Floor(((float)forestIndex) / ((float)forestsPerLayer) * ((float)samples[0].input.Count));
-                xComponentCount = Math.Min(Math.Max(1, xComponentCount), samples[0].input.Count);
+                int xComponentCount = (int)Math.Max(1, Math.Sqrt(samples[0].input.Count));
 
                 // create a random forest for this layer
                 RandomForest randomForest = new RandomForest(trainingSamples, yComponent, xComponentCount, treesPerForest, extraRandom);
@@ -89,7 +88,7 @@ public class DeepRandomForest
         }
 
         // create the last random forest layer (which is only a single forest)
-        RandomForest lastRandomForest = new RandomForest(trainingSamples, yComponent, samples[0].input.Count, treesPerForest, extraRandom);
+        RandomForest lastRandomForest = new RandomForest(trainingSamples, yComponent, (int)Math.Max(1, Math.Sqrt(samples[0].input.Count)), treesPerForest, extraRandom);
         randomForestLayers.Add(new List<RandomForest>() { lastRandomForest });
     }
 
