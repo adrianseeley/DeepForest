@@ -1,6 +1,5 @@
 public class RandomForest
 {
-    public Random random;
     public int yComponent;
     public List<RandomTree> randomTrees;
 
@@ -12,21 +11,24 @@ public class RandomForest
             throw new ArgumentException("Samples must not be empty.", nameof(samples));
         }
 
-        // create a local random instance (for thread safety)
-        this.random = new Random();
-
         // mark the y component of interest
         this.yComponent = yComponent;
 
         // initialize the random trees list
         this.randomTrees = new List<RandomTree>();
 
+        // create a lock for the random trees list
+        object randomTreesLock = new object();
+
         // create an array of all the x components
         int[] allXComponents = Enumerable.Range(0, samples[0].input.Count).ToArray();
 
         // iterate through all the trees
-        for (int treeIndex = 0; treeIndex < treeCount; treeIndex++)
+        Parallel.For(0, treeCount, (treeIndex) =>
         {
+            // create a local random instance (for thread safety)
+            Random random = new Random();
+
             // create a list of random samples
             List<(List<float> input, List<float> output)> randomSamples = new List<(List<float> input, List<float> output)>();
 
@@ -43,9 +45,15 @@ public class RandomForest
             // randomly shuffle the x components and take the first xComponentCount
             List<int> randomXComponents = allXComponents.OrderBy(x => random.Next()).Take(xComponentCount).ToList();
 
-            // add a new random tree to the list
-            randomTrees.Add(new RandomTree(random, randomSamples, randomXComponents, yComponent, extraRandom));
-        }
+            // create random tree
+            RandomTree randomTree = new RandomTree(random, randomSamples, randomXComponents, yComponent, extraRandom);
+
+            // lock the random trees list and add the random tree
+            lock (randomTreesLock)
+            {
+                randomTrees.Add(randomTree);
+            }
+        });
     }
 
     public float Predict(List<float> input)

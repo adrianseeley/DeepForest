@@ -41,8 +41,11 @@ public class RandomTree
         float bestError = error;
         int bestXComponent = -1;
         float bestXValue = float.NaN;
-        List<(List<float> input, List<float> output)> leftSamples;
-        List<(List<float> input, List<float> output)> rightSamples;
+        List<(List<float> input, List<float> output)> leftSamples = new List<(List<float> input, List<float> output)>(samples.Count);
+        List<(List<float> input, List<float> output)> rightSamples = new List<(List<float> input, List<float> output)>(samples.Count);
+
+        // setup a flag for extra random found
+        bool extraRandomFound = false;
 
         // iterate through the available x components
         foreach (int xComponent in xComponents)
@@ -54,8 +57,19 @@ public class RandomTree
             foreach (float xValue in xValues)
             {
                 // gather the left and right samples
-                leftSamples = samples.Where(s => s.input[xComponent] <= xValue).ToList();
-                rightSamples = samples.Where(s => s.input[xComponent] > xValue).ToList();
+                leftSamples.Clear();
+                rightSamples.Clear();
+                foreach ((List<float> input, List<float> output) sample in samples)
+                {
+                    if (sample.input[xComponent] <= xValue)
+                    {
+                        leftSamples.Add(sample);
+                    }
+                    else
+                    {
+                        rightSamples.Add(sample);
+                    }
+                }
 
                 // if either the left or right samples are empty, this is not a valid split
                 if (leftSamples.Count == 0 || rightSamples.Count == 0)
@@ -68,6 +82,7 @@ public class RandomTree
                 {
                     bestXComponent = xComponent;
                     bestXValue = xValue;
+                    extraRandomFound = true;
                     break;
                 }
 
@@ -91,6 +106,12 @@ public class RandomTree
                     bestXValue = xValue;
                 }
             }
+
+            // if we found a split for extra random, break
+            if (extraRandomFound)
+            {
+                break;
+            }
         }
 
         // if we found no split better than our starting error, return
@@ -103,9 +124,24 @@ public class RandomTree
         splitXComponent = bestXComponent;
         splitXValue = bestXValue;
 
-        // gather the left and right samples
-        leftSamples = samples.Where(s => s.input[bestXComponent] <= bestXValue).ToList();
-        rightSamples = samples.Where(s => s.input[bestXComponent] > bestXValue).ToList();
+        // non extra random trees require regathering (extra random is already gathered at this point)
+        if (!extraRandom)
+        {
+            // gather the left and right samples
+            leftSamples.Clear();
+            rightSamples.Clear();
+            foreach ((List<float> input, List<float> output) sample in samples)
+            {
+                if (sample.input[bestXComponent] <= bestXValue)
+                {
+                    leftSamples.Add(sample);
+                }
+                else
+                {
+                    rightSamples.Add(sample);
+                }
+            }
+        }
 
         // create the left and right children
         left = new RandomTree(random, leftSamples, xComponents, yComponent, extraRandom);
