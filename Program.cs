@@ -68,13 +68,13 @@
 
     public static void Main()
     {
-        List<(List<float> input, List<float> output)> mnistTrain = ReadMNIST("D:/data/mnist_train.csv", max: 1000);
+        List<(List<float> input, List<float> output)> mnistTrain = ReadMNIST("D:/data/mnist_train.csv", max: 10000);
         List<(List<float> input, List<float> output)> mnistTest = ReadMNIST("D:/data/mnist_test.csv");
 
         using TextWriter results = new StreamWriter("results.csv");
         results.WriteLine("forestCount,treeCount,fitness");
 
-        int[] treeCounts = [1, 5, 10, 50, 100, 500, 1000];
+        int[] treeCounts = [1, 5, 10, 50];//, 100, 500, 1000];
 
         MultiDeepRandomForest mdrf;
         for (int forestCount = 1; forestCount < 100; forestCount++)
