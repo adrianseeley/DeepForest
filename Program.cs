@@ -41,22 +41,28 @@
 
     public static float OneHotFitness(MultiDeepRandomForest mdrf, List<(List<float> input, List<float> output)> test)
     {
+        object trackLock = new object();
         int correct = 0;
         int incorrect = 0;
-        foreach ((List<float> input, List<float> output) sample in test)
+        Parallel.For(0, test.Count, (index) =>
         {
+            int localIndex = index;
+            (List<float> input, List<float> output) sample = test[localIndex];
             List<float> predictOutput = mdrf.Predict(sample.input);
             int predictLabel = predictOutput.IndexOf(predictOutput.Max());
             int actualLabel = sample.output.IndexOf(sample.output.Max());
-            if (predictLabel == actualLabel)
+            lock (trackLock)
             {
-                correct++;
+                if (predictLabel == actualLabel)
+                {
+                    correct++;
+                }
+                else
+                {
+                    incorrect++;
+                }
             }
-            else
-            {
-                incorrect++;
-            }
-        }
+        });
         return ((float)correct) / ((float)test.Count);
     }
 
