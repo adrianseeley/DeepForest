@@ -4,7 +4,7 @@ public class RandomForest
     public int yComponent;
     public List<RandomTree> randomTrees;
 
-    public RandomForest(List<(List<float> input, List<float> output)> samples, int yComponent, int treeCount)
+    public RandomForest(List<(List<float> input, List<float> output)> samples, int yComponent, int treeCount, bool extraRandom)
     {
         // confirm we have samples to work with
         if (samples.Count == 0)
@@ -44,7 +44,7 @@ public class RandomForest
             List<int> randomXComponents = allXComponents.OrderBy(x => random.Next()).Take(xComponentCount).ToList();
 
             // add a new random tree to the list
-            randomTrees.Add(new RandomTree(randomSamples, randomXComponents, yComponent));
+            randomTrees.Add(new RandomTree(random, randomSamples, randomXComponents, yComponent, extraRandom));
         }
     }
 

@@ -3,7 +3,7 @@ public class DeepRandomForest
     public int yComponent;
     public List<RandomForest> randomForests;
 
-    public DeepRandomForest(List<(List<float> input, List<float> output)> samples, int yComponent, int treeCount, int forestCount)
+    public DeepRandomForest(List<(List<float> input, List<float> output)> samples, int yComponent, int treeCount, int forestCount, bool extraRandom)
     {
         // confirm we have samples to work with
         if (samples.Count == 0)
@@ -31,7 +31,7 @@ public class DeepRandomForest
         for (int forestIndex = 0; forestIndex < forestCount - 1; forestIndex++)
         {
             // create a random forest for this layer
-            RandomForest randomForest = new RandomForest(trainingSamples, yComponent, treeCount);
+            RandomForest randomForest = new RandomForest(trainingSamples, yComponent, treeCount, extraRandom);
             randomForests.Add(randomForest);
 
             // iterate through all the training samples
@@ -50,7 +50,7 @@ public class DeepRandomForest
         }
 
         // create the last random forest which does not have a subsequent forest
-        RandomForest lastRandomForest = new RandomForest(trainingSamples, yComponent, treeCount);
+        RandomForest lastRandomForest = new RandomForest(trainingSamples, yComponent, treeCount, extraRandom);
         randomForests.Add(lastRandomForest);
     }
 

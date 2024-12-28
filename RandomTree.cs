@@ -8,7 +8,7 @@ public class RandomTree
     public RandomTree? left;
     public RandomTree? right;
 
-    public RandomTree(List<(List<float> input, List<float> output)> samples, List<int> xComponents, int yComponent)
+    public RandomTree(Random random, List<(List<float> input, List<float> output)> samples, List<int> xComponents, int yComponent, bool extraRandom)
     {
         // confirm we have samples to work with
         if (samples.Count == 0)
@@ -47,8 +47,8 @@ public class RandomTree
         // iterate through the available x components
         foreach (int xComponent in xComponents)
         {
-            // create a hashset of all the x values for the current x component
-            HashSet<float> xValues = new HashSet<float>(samples.Select(s => s.input[xComponent]));
+            // create a distinct list of all the x values for the current x component, and shuffle them
+            List<float> xValues = samples.Select(s => s.input[xComponent]).Distinct().OrderBy(x => random.Next()).ToList();
 
             // iterate through the x values
             foreach (float xValue in xValues)
@@ -61,6 +61,14 @@ public class RandomTree
                 if (leftSamples.Count == 0 || rightSamples.Count == 0)
                 {
                     continue;
+                }
+
+                // if this is an extra random tree, any valid split is a good split
+                if (extraRandom)
+                {
+                    bestXComponent = xComponent;
+                    bestXValue = xValue;
+                    break;
                 }
 
                 // calculate the left and right y values
@@ -100,8 +108,8 @@ public class RandomTree
         rightSamples = samples.Where(s => s.input[bestXComponent] > bestXValue).ToList();
 
         // create the left and right children
-        left = new RandomTree(leftSamples, xComponents, yComponent);
-        right = new RandomTree(rightSamples, xComponents, yComponent);
+        left = new RandomTree(random, leftSamples, xComponents, yComponent, extraRandom);
+        right = new RandomTree(random, rightSamples, xComponents, yComponent, extraRandom);
     }
 
     public float Predict(List<float> input)

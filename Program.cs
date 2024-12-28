@@ -7,7 +7,7 @@
         samples.Add((new List<float> { 1, 0 }, new List<float> { 1 }));
         samples.Add((new List<float> { 0, 1 }, new List<float> { 1 }));
         samples.Add((new List<float> { 1, 1 }, new List<float> { 0 }));
-        MultiDeepRandomForest multiDeepRandomForest = new MultiDeepRandomForest(samples, 10, 10);
+        MultiDeepRandomForest multiDeepRandomForest = new MultiDeepRandomForest(samples, 100, 3, false);
 
         foreach ((List<float> input, List<float> output) sample in samples)
         {
