@@ -2,7 +2,7 @@ public class MultiDeepRandomForest
 {
     public List<DeepRandomForest> deepRandomForests;
 
-    public MultiDeepRandomForest(List<(List<float> input, List<float> output)> samples, int treesPerForest, int forestsPerLayer, int layers, bool extraRandom)
+    public MultiDeepRandomForest(List<(List<float> input, List<float> output)> samples, int treesPerForest, int forestsPerLayer, int layers, bool extraRandom, bool verbose)
     {
         // confirm we have samples to work with
         if (samples.Count == 0)
@@ -16,8 +16,13 @@ public class MultiDeepRandomForest
         // iterate through all the y components
         for (int yIndex = 0; yIndex < samples[0].output.Count; yIndex++)
         {
+            if (verbose)
+            {
+                Console.WriteLine($"MDRF Y: {yIndex}/{samples[9].output.Count - 1}");
+            }
+
             // create a deep random forest for this y component
-            DeepRandomForest deepRandomForest = new DeepRandomForest(samples, yIndex, treesPerForest, forestsPerLayer, layers, extraRandom);
+            DeepRandomForest deepRandomForest = new DeepRandomForest(samples, yIndex, treesPerForest, forestsPerLayer, layers, extraRandom, verbose);
             deepRandomForests.Add(deepRandomForest);
         }
     }

@@ -39,7 +39,7 @@
         return data;
     }
 
-    public static float OneHotFitness(MultiDeepRandomForest mdrf, List<(List<float> input, List<float> output)> test)
+    public static float OneHotFitness(MultiDeepRandomForest mdrf, List<(List<float> input, List<float> output)> test, bool verbose)
     {
         object trackLock = new object();
         int correct = 0;
@@ -61,8 +61,16 @@
                 {
                     incorrect++;
                 }
+                if (verbose)
+                {
+                    Console.Write($"\rCorrect: {correct}, Incorrect: {incorrect}");
+                }
             }
         });
+        if (verbose)
+        {
+            Console.WriteLine();
+        }
         return ((float)correct) / ((float)test.Count);
     }
 
@@ -74,25 +82,9 @@
         using TextWriter results = new StreamWriter("results.csv");
         results.WriteLine("layers,forests,trees,fitness");
 
-        int[] treeCounts = [20, 30, 40, 50];
-        int[] forestsPerLayerCounts = [20, 30, 40, 50];
-        int[] layersCount = [1, 2, 3, 4, 5];
-
-        MultiDeepRandomForest mdrf;
-        foreach (int layerCount in layersCount)
-        {
-            foreach (int forestsPerLayer in forestsPerLayerCounts)
-            {
-                foreach (int treeCount in treeCounts)
-                {
-                    Console.Write($"L: {layerCount}, F: {forestsPerLayer}, T: {treeCount}, R: ");
-                    mdrf = new MultiDeepRandomForest(mnistTrain, treeCount, forestsPerLayer, layerCount, true);
-                    float fitness = OneHotFitness(mdrf, mnistTest);
-                    Console.WriteLine(fitness);
-                    results.WriteLine($"{layerCount},{forestsPerLayer},{treeCount},{fitness}");
-                    results.Flush();
-                }
-            }
-        }
+        MultiDeepRandomForest mdrf = new MultiDeepRandomForest(mnistTrain, treesPerForest: 50, forestsPerLayer: 50, layers: 3, extraRandom: true, verbose: true);
+        float fitness = OneHotFitness(mdrf, mnistTest, verbose: true);
+        Console.WriteLine($"Fitness: {fitness}");
+        Console.ReadLine();
     }
 }

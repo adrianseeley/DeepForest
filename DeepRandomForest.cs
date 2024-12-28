@@ -3,7 +3,7 @@ public class DeepRandomForest
     public int yComponent;
     public List<List<RandomForest>> randomForestLayers;
 
-    public DeepRandomForest(List<(List<float> input, List<float> output)> samples, int yComponent, int treesPerForest, int forestsPerLayer, int layers, bool extraRandom)
+    public DeepRandomForest(List<(List<float> input, List<float> output)> samples, int yComponent, int treesPerForest, int forestsPerLayer, int layers, bool extraRandom, bool verbose)
     {
         // confirm we have samples to work with
         if (samples.Count == 0)
@@ -39,21 +39,49 @@ public class DeepRandomForest
             // iterate through the forests per layer
             for (int forestIndex = 0; forestIndex < forestsPerLayer; forestIndex++)
             {
+                if (verbose)
+                {
+                    Console.WriteLine($"DRF Inner Layer: {layerIndex}/{layers - 2}, Forest: {forestIndex}/{forestsPerLayer - 1}");
+                }
+
                 // create a random forest for this layer
                 RandomForest randomForest = new RandomForest(trainingSamples, yComponent, treesPerForest, extraRandom);
                 randomForestLayer.Add(randomForest);
             }
 
             // iterate through all the training samples
-            foreach ((List<float> input, List<float> output) trainingSample in trainingSamples)
+            int fed = 0;
+            object fedLock = new object();
+            Parallel.For(0, trainingSamples.Count, sampleIndex =>
             {
+                int localSampleIndex = sampleIndex;
+                (List<float> input, List<float> output) trainingSample = trainingSamples[localSampleIndex];
+
                 // for each forest in the previous layer
                 foreach (RandomForest randomForest in randomForestLayer)
                 {
                     // add the prediction of the forest to the input of this training sample (concat)
                     trainingSample.input.Add(randomForest.Predict(trainingSample.input));
                 }
+
+                if (verbose)
+                {
+                    lock(fedLock)
+                    {
+                        Console.Write($"\rDRF Inner Layer Fed: {fed}/{trainingSamples.Count - 1}");
+                        fed++;
+                    }
+                }
+            });
+            if (verbose)
+            {
+                Console.WriteLine();
             }
+        }
+
+        if (verbose)
+        {
+            Console.WriteLine($"DRF Outer Layer");
         }
 
         // create the last random forest layer (which is only a single forest)
