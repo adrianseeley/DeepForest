@@ -10,78 +10,130 @@ public class RandomTree
 
     public RandomTree(List<(List<float> input, List<float> output)> samples, List<int> xComponents, int yComponent)
     {
+        // confirm we have samples to work with
         if (samples.Count == 0)
         {
             throw new ArgumentException("Samples must not be empty.", nameof(samples));
         }
+
+        // mark the y component of interest
         this.yComponent = yComponent;
-        y = samples.Select(s => s.output[yComponent]).Average();
-        error = samples.Select(s => Math.Abs(s.output[yComponent] - y)).Sum() / samples.Count;
-        splitXComponent = null;
-        splitXValue = null;
-        left = null;
-        right = null;
+
+        // set the y value of the tree to the average of the y component of the samples
+        this.y = samples.Select(s => s.output[yComponent]).Average();
+
+        // use the mean absolute error as the error of the tree
+        this.error = samples.Select(s => Math.Abs(s.output[yComponent] - y)).Sum() / samples.Count;
+
+        // initialize split criteria to null, so if we find no split, we can return
+        this.splitXComponent = null;
+        this.splitXValue = null;
+        this.left = null;
+        this.right = null;
+
+        // if there is no error, we have a homogoneous y component, no split required
+        if (error == 0f)
+        {
+            return;
+        }
+
+        // search for the best split
         float bestError = error;
         int bestXComponent = -1;
         float bestXValue = float.NaN;
         List<(List<float> input, List<float> output)> leftSamples;
         List<(List<float> input, List<float> output)> rightSamples;
+
+        // iterate through the available x components
         foreach (int xComponent in xComponents)
         {
+            // create a hashset of all the x values for the current x component
             HashSet<float> xValues = new HashSet<float>(samples.Select(s => s.input[xComponent]));
+
+            // iterate through the x values
             foreach (float xValue in xValues)
             {
+                // gather the left and right samples
                 leftSamples = samples.Where(s => s.input[xComponent] <= xValue).ToList();
                 rightSamples = samples.Where(s => s.input[xComponent] > xValue).ToList();
+
+                // if either the left or right samples are empty, this is not a valid split
                 if (leftSamples.Count == 0 || rightSamples.Count == 0)
                 {
                     continue;
                 }
+
+                // calculate the left and right y values
                 float leftY = leftSamples.Select(s => s.output[yComponent]).Average();
                 float rightY = rightSamples.Select(s => s.output[yComponent]).Average();
+
+                // calculate the left and right errors
                 float leftError = leftSamples.Select(s => Math.Abs(s.output[yComponent] - leftY)).Sum() / leftSamples.Count;
                 float rightError = rightSamples.Select(s => Math.Abs(s.output[yComponent] - rightY)).Sum() / rightSamples.Count;
+
+                // calculate the weighted joint error of the left and right errors
                 float jointError = (leftError * (leftSamples.Count / samples.Count)) + (rightError * (rightSamples.Count / samples.Count));
+
+                // if the joint error is better than the initial error
                 if (jointError < bestError)
                 {
+                    // update the best error, x component, and x value
                     bestError = jointError;
                     bestXComponent = xComponent;
                     bestXValue = xValue;
                 }
             }
         }
+
+        // if we found no split better than our starting error, return
         if (bestXComponent == -1)
         {
             return;
         }
+
+        // mark the best split
         splitXComponent = bestXComponent;
         splitXValue = bestXValue;
+
+        // gather the left and right samples
         leftSamples = samples.Where(s => s.input[bestXComponent] <= bestXValue).ToList();
         rightSamples = samples.Where(s => s.input[bestXComponent] > bestXValue).ToList();
+
+        // create the left and right children
         left = new RandomTree(leftSamples, xComponents, yComponent);
         right = new RandomTree(rightSamples, xComponents, yComponent);
     }
 
     public float Predict(List<float> input)
     {
+        // if this is a leaf node, return the y value
         if (splitXComponent == null)
         {
             return y;
         }
+
+        // if the sample goes to the left
         if (input[splitXComponent.Value] <= splitXValue)
         {
+            // safety check left child
             if (left == null)
             {
                 throw new InvalidOperationException("Left child must not be null.");
             }
+
+            // return the left child prediction
             return left.Predict(input);
         }
+        // otherwise the sample goes to the right
         else
         {
+            // safety check right child
             if (right == null)
             {
                 throw new InvalidOperationException("Right child must not be null.");
             }
+
+            // return the right child prediction
             return right.Predict(input);
         }
     }
