@@ -68,25 +68,30 @@
 
     public static void Main()
     {
-        List<(List<float> input, List<float> output)> mnistTrain = ReadMNIST("D:/data/mnist_train.csv", max: 10000);
+        List<(List<float> input, List<float> output)> mnistTrain = ReadMNIST("D:/data/mnist_train.csv", max: 1000);
         List<(List<float> input, List<float> output)> mnistTest = ReadMNIST("D:/data/mnist_test.csv");
 
         using TextWriter results = new StreamWriter("results.csv");
-        results.WriteLine("forestCount,treeCount,fitness");
+        results.WriteLine("layers,forests,trees,fitness");
 
-        int[] treeCounts = [1, 5, 10, 50];//, 100, 500, 1000];
+        int[] treeCounts = [20, 30, 40, 50];
+        int[] forestsPerLayerCounts = [20, 30, 40, 50];
+        int[] layersCount = [1, 2, 3, 4, 5];
 
         MultiDeepRandomForest mdrf;
-        for (int forestCount = 1; forestCount < 100; forestCount++)
+        foreach (int layerCount in layersCount)
         {
-            foreach (int treeCount in treeCounts)
+            foreach (int forestsPerLayer in forestsPerLayerCounts)
             {
-                Console.Write($"F: {forestCount}, T: {treeCount}, R: ");
-                mdrf = new MultiDeepRandomForest(mnistTrain, treeCount, forestCount, true);
-                float fitness = OneHotFitness(mdrf, mnistTest);
-                Console.WriteLine(fitness);
-                results.WriteLine($"{forestCount},{treeCount},{fitness}");
-                results.Flush();
+                foreach (int treeCount in treeCounts)
+                {
+                    Console.Write($"L: {layerCount}, F: {forestsPerLayer}, T: {treeCount}, R: ");
+                    mdrf = new MultiDeepRandomForest(mnistTrain, treeCount, forestsPerLayer, layerCount, true);
+                    float fitness = OneHotFitness(mdrf, mnistTest);
+                    Console.WriteLine(fitness);
+                    results.WriteLine($"{layerCount},{forestsPerLayer},{treeCount},{fitness}");
+                    results.Flush();
+                }
             }
         }
     }

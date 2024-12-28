@@ -1,9 +1,9 @@
 public class DeepRandomForest
 {
     public int yComponent;
-    public List<RandomForest> randomForests;
+    public List<List<RandomForest>> randomForestLayers;
 
-    public DeepRandomForest(List<(List<float> input, List<float> output)> samples, int yComponent, int treeCount, int forestCount, bool extraRandom)
+    public DeepRandomForest(List<(List<float> input, List<float> output)> samples, int yComponent, int treesPerForest, int forestsPerLayer, int layers, bool extraRandom)
     {
         // confirm we have samples to work with
         if (samples.Count == 0)
@@ -14,8 +14,8 @@ public class DeepRandomForest
         // mark the y component of interest
         this.yComponent = yComponent;
 
-        // initialize the random forests list
-        this.randomForests = new List<RandomForest>();
+        // initialize the random forest layers list
+        this.randomForestLayers = new List<List<RandomForest>>();
 
         // create a mutation safe list of training samples
         List<(List<float> input, List<float> output)> trainingSamples = new List<(List<float> input, List<float> output)>();
@@ -28,30 +28,37 @@ public class DeepRandomForest
         }
 
         // iterate through all the forest layers (except the last)
-        for (int forestIndex = 0; forestIndex < forestCount - 1; forestIndex++)
+        for (int layerIndex = 0; layerIndex < layers - 1; layerIndex++)
         {
-            // create a random forest for this layer
-            RandomForest randomForest = new RandomForest(trainingSamples, yComponent, treeCount, extraRandom);
-            randomForests.Add(randomForest);
+            // initialize the random forests list for this layer
+            List<RandomForest> randomForestLayer = new List<RandomForest>();
+
+            // add it to the layers
+            randomForestLayers.Add(randomForestLayer);
+
+            // iterate through the forests per layer
+            for (int forestIndex = 0; forestIndex < forestsPerLayer; forestIndex++)
+            {
+                // create a random forest for this layer
+                RandomForest randomForest = new RandomForest(trainingSamples, yComponent, treesPerForest, extraRandom);
+                randomForestLayer.Add(randomForest);
+            }
 
             // iterate through all the training samples
             foreach ((List<float> input, List<float> output) trainingSample in trainingSamples)
             {
-                // for each tree in the previous forest
-                foreach (RandomTree randomTree in randomForest.randomTrees)
+                // for each forest in the previous layer
+                foreach (RandomForest randomForest in randomForestLayer)
                 {
-                    // add the prediction of the single tree to the input of this training sample (concat)
-                    trainingSample.input.Add(randomTree.Predict(trainingSample.input));
+                    // add the prediction of the forest to the input of this training sample (concat)
+                    trainingSample.input.Add(randomForest.Predict(trainingSample.input));
                 }
-
-                // add the prediction of the ensemble of the previous forest to this training sample (concat)
-                trainingSample.input.Add(randomForest.Predict(trainingSample.input));
             }
         }
 
-        // create the last random forest which does not have a subsequent forest
-        RandomForest lastRandomForest = new RandomForest(trainingSamples, yComponent, treeCount, extraRandom);
-        randomForests.Add(lastRandomForest);
+        // create the last random forest layer (which is only a single forest)
+        RandomForest lastRandomForest = new RandomForest(trainingSamples, yComponent, treesPerForest, extraRandom);
+        randomForestLayers.Add(new List<RandomForest>() { lastRandomForest });
     }
 
     public float Predict(List<float> input)
@@ -60,27 +67,24 @@ public class DeepRandomForest
         List<float> predictInput = new List<float>(input);
 
         // iterate through all the forest layers (except the last)
-        for (int forestIndex = 0; forestIndex < randomForests.Count - 1; forestIndex++)
+        for (int layerIndex = 0; layerIndex < randomForestLayers.Count - 1; layerIndex++)
         {
-            // get the forest at the current index
-            RandomForest randomForest = randomForests[forestIndex];
+            // get the random forest layer at the current index
+            List<RandomForest> randomForestLayer = randomForestLayers[layerIndex];
 
-            // iterate through all the trees in the forest
-            for (int treeIndex = 0; treeIndex < randomForest.randomTrees.Count; treeIndex++)
+            // iterate through all the forests in the layer
+            foreach (RandomForest randomForest in randomForestLayer)
             {
-                // get the tree at the current index
-                RandomTree randomTree = randomForest.randomTrees[treeIndex];
-
-                // add the prediction of the single tree to the input (concat)
-                predictInput.Add(randomTree.Predict(predictInput));
+                // add the prediction of the forest to the input (concat)
+                predictInput.Add(randomForest.Predict(predictInput));
             }
-
-            // add the prediction of the ensemble to the input (concat)
-            predictInput.Add(randomForest.Predict(predictInput));
         }
 
-        // get the last random forest
-        RandomForest lastRandomForest = randomForests[randomForests.Count - 1];
+        // get the last random forest layer
+        List<RandomForest> lastRandomForestLayer = randomForestLayers[randomForestLayers.Count - 1];
+        
+        // get the last random forest (there is only one in the final layer
+        RandomForest lastRandomForest = lastRandomForestLayer[0];
 
         // return the prediction of the last random forest
         return lastRandomForest.Predict(predictInput);
