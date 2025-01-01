@@ -80,4 +80,14 @@ public class RandomForest
         }
         return average;
     }
+
+    public long CountNodes()
+    {
+        long count = 0;
+        foreach(RandomTree randomTree in randomTrees)
+        {
+            randomTree.CountNodes(ref count);
+        }
+        return count;
+    }
 }

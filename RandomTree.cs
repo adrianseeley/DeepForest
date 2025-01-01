@@ -121,4 +121,17 @@ public class RandomTree
             return right.Predict(input);
         }
     }
+
+    public void CountNodes(ref long count)
+    {
+        count++;
+        if (left != null)
+        {
+            left.CountNodes(ref count);
+        }
+        if (right != null)
+        {
+            right.CountNodes(ref count);
+        }
+    }
 }

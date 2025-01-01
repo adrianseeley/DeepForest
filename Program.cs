@@ -70,14 +70,34 @@
         Random random = new Random();
 
         TextWriter tw = new StreamWriter("./results.csv", false);
-        tw.WriteLine("minSamplesPerLeaf,treeCount,fitness");
+        tw.WriteLine("minSamplesPerLeaf,nodeCount,treeCount,fitness");
         object writeLock = new object();
 
-        Parallel.For(1, 100, i =>
+        RandomForest rf = new RandomForest(mnistTrain, xComponentCount: 50, treeCount: 0, minSamplesPerLeaf: 1);
+        for (int treeIndex = 0; treeIndex < 500; treeIndex++)
+        {
+            rf.AddTree(mnistTrain);
+            List<float[]> predictions = new List<float[]>(mnistTest.Count);
+            foreach (Sample sample in mnistTest)
+            {
+                predictions.Add(rf.Predict(sample.input));
+            }
+            float fitness = Fitness(mnistTest, predictions);
+            long nodeCount = rf.CountNodes();
+            lock (writeLock)
+            {
+                Console.WriteLine($"mspl: {1}, nc: {nodeCount} t: {rf.randomTrees.Count}, f: {fitness}");
+                tw.WriteLine($"{1},{nodeCount},{rf.randomTrees.Count},{fitness}");
+                tw.Flush();
+            }
+        }
+        long targetNodeCount = rf.CountNodes();
+
+        Parallel.For(2, 100, i =>
         {
             int minSamplesPerLeaf = i;
             RandomForest rf = new RandomForest(mnistTrain, xComponentCount: 50, treeCount: 0, minSamplesPerLeaf: minSamplesPerLeaf);
-            for (int treeIndex = 0; treeIndex < 500; treeIndex++)
+            for (; ;)
             {
                 rf.AddTree(mnistTrain);
                 List<float[]> predictions = new List<float[]>(mnistTest.Count);
@@ -86,10 +106,15 @@
                     predictions.Add(rf.Predict(sample.input));
                 }
                 float fitness = Fitness(mnistTest, predictions);
+                long nodeCount = rf.CountNodes();
                 lock (writeLock)
                 {
-                    Console.WriteLine($"mspl: {minSamplesPerLeaf}, t: {rf.randomTrees.Count}, f: {fitness}");
-                    tw.WriteLine($"{minSamplesPerLeaf},{rf.randomTrees.Count},{fitness}");
+                    Console.WriteLine($"mspl: {minSamplesPerLeaf}, nc: {nodeCount}, t: {rf.randomTrees.Count}, f: {fitness}");
+                    tw.WriteLine($"{minSamplesPerLeaf},{nodeCount},{rf.randomTrees.Count},{fitness}");
+                }
+                if (nodeCount >= targetNodeCount)
+                {
+                    break;
                 }
             }
         });
