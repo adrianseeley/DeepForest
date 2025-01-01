@@ -4,7 +4,7 @@ public class BoostedRandomTree
     public float learningRate;
     public List<RandomTree> randomTrees;
 
-    public BoostedRandomTree(Random random, List<Sample> samples, List<int> xComponents, int treeCount, float learningRate)
+    public BoostedRandomTree(Random random, List<Sample> samples, List<int> xComponents, int treeCount, float learningRate, int minSamplesPerLeaf)
     {
         this.outputComponentCount = samples[0].output.Length;
         this.learningRate = learningRate;
@@ -32,7 +32,7 @@ public class BoostedRandomTree
                 residuals.Add(new Sample(samples[i].input, residual));
             }
 
-            RandomTree randomTree = new RandomTree(random, residuals, xComponents);
+            RandomTree randomTree = new RandomTree(random, residuals, xComponents, minSamplesPerLeaf);
             randomTrees.Add(randomTree);
 
             for (int i = 0; i < samples.Count; i++)

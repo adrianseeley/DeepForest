@@ -29,47 +29,70 @@
         return samples;
     }
 
-    public static float OneHotFitness(MultiDeepRandomForest mdrf, List<Sample> test, bool verbose)
+    public static float Fitness(List<Sample> samples, List<float[]> predictions)
     {
-        object trackLock = new object();
         int correct = 0;
-        int incorrect = 0;
-        Parallel.For(0, test.Count, (index) =>
+        for (int i = 0; i < samples.Count; i++)
         {
-            int localIndex = index;
-            Sample sample = test[localIndex];
-            List<float> predictOutput = mdrf.Predict(sample.input);
-            int predictLabel = predictOutput.IndexOf(predictOutput.Max());
-            int actualLabel = sample.output.IndexOf(sample.output.Max());
-            lock (trackLock)
+            float[] actual = samples[i].output;
+            float[] prediction = predictions[i];
+            float maxValueActual = float.NegativeInfinity;
+            int maxValueActualIndex = -1;
+            float maxValuePrediction = float.NegativeInfinity;
+            int maxValuePredictionIndex = -1;
+            for (int j = 0; j < actual.Length; j++)
             {
-                if (predictLabel == actualLabel)
+                if (actual[j] > maxValueActual)
                 {
-                    correct++;
+                    maxValueActual = actual[j];
+                    maxValueActualIndex = j;
                 }
-                else
+                if (prediction[j] > maxValuePrediction)
                 {
-                    incorrect++;
-                }
-                if (verbose)
-                {
-                    Console.Write($"\rCorrect: {correct}, Incorrect: {incorrect}");
+                    maxValuePrediction = prediction[j];
+                    maxValuePredictionIndex = j;
                 }
             }
-        });
-        if (verbose)
-        {
-            Console.WriteLine();
+            if (maxValueActualIndex == maxValuePredictionIndex)
+            {
+                correct++;
+            }
         }
-        return ((float)correct) / ((float)test.Count);
+        return (float)correct / (float)samples.Count;
     }
 
     public static void Main()
     {
         List<Sample> mnistTrain = ReadMNIST("D:/data/mnist_train.csv", max: 1000);
         List<Sample> mnistTest = ReadMNIST("D:/data/mnist_test.csv");
+        int inputComponentCount = mnistTrain[0].input.Length;
 
         Random random = new Random();
-        BoostedRandomTree brt = new BoostedRandomTree(random, mnistTrain, Enumerable.Range(0, 784).ToList(), 100, 0.1f);
+
+        TextWriter tw = new StreamWriter("./results.csv", false);
+        tw.WriteLine("minSamplesPerLeaf,treeCount,fitness");
+        object writeLock = new object();
+
+        Parallel.For(1, 100, i =>
+        {
+            int minSamplesPerLeaf = i;
+            RandomForest rf = new RandomForest(mnistTrain, xComponentCount: 50, treeCount: 0, minSamplesPerLeaf: minSamplesPerLeaf);
+            for (int treeIndex = 0; treeIndex < 500; treeIndex++)
+            {
+                rf.AddTree(mnistTrain);
+                List<float[]> predictions = new List<float[]>(mnistTest.Count);
+                foreach (Sample sample in mnistTest)
+                {
+                    predictions.Add(rf.Predict(sample.input));
+                }
+                float fitness = Fitness(mnistTest, predictions);
+                lock (writeLock)
+                {
+                    Console.WriteLine($"mspl: {minSamplesPerLeaf}, t: {rf.randomTrees.Count}, f: {fitness}");
+                    tw.WriteLine($"{minSamplesPerLeaf},{rf.randomTrees.Count},{fitness}");
+                }
+            }
+        });
+        Console.ReadLine();
     }
 }

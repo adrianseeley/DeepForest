@@ -6,7 +6,7 @@ public class RandomTree
     public RandomTree? left;
     public RandomTree? right;
 
-    public RandomTree(Random random, List<Sample> samples, List<int> xComponents)
+    public RandomTree(Random random, List<Sample> samples, List<int> xComponents, int minSamplesPerLeaf)
     {
         // confirm we have samples to work with
         if (samples.Count == 0)
@@ -69,15 +69,15 @@ public class RandomTree
                 }
 
                 // if the split is valid
-                if (leftSamples.Count > 0 && rightSamples.Count > 0)
+                if (leftSamples.Count > minSamplesPerLeaf && rightSamples.Count > minSamplesPerLeaf)
                 {
                     // mark split
                     splitXComponent = xComponent;
                     splitXValue = xValue;
 
                     // create the left and right children
-                    left = new RandomTree(random, leftSamples, xComponents);
-                    right = new RandomTree(random, rightSamples, xComponents);
+                    left = new RandomTree(random, leftSamples, xComponents, minSamplesPerLeaf);
+                    right = new RandomTree(random, rightSamples, xComponents, minSamplesPerLeaf);
 
                     // done
                     return;

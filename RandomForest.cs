@@ -1,9 +1,13 @@
 public class RandomForest
 {
     public int outputComponentCount;
+    public int[] allXComponents;
+    public int xComponentCount;
+    public int minSamplesPerLeaf;
     public List<RandomTree> randomTrees;
+    public object randomTreesLock;
 
-    public RandomForest(List<Sample> samples, int xComponentCount, int treeCount)
+    public RandomForest(List<Sample> samples, int xComponentCount, int treeCount, int minSamplesPerLeaf)
     {
         // confirm we have samples to work with
         if (samples.Count == 0)
@@ -12,44 +16,51 @@ public class RandomForest
         }
 
         this.outputComponentCount = samples[0].output.Length;
+        this.xComponentCount = xComponentCount;
+        this.minSamplesPerLeaf = minSamplesPerLeaf;
 
         // initialize the random trees list
         this.randomTrees = new List<RandomTree>();
 
         // create a lock for the random trees list
-        object randomTreesLock = new object();
+        this.randomTreesLock = new object();
 
         // create an array of all the x components
-        int[] allXComponents = Enumerable.Range(0, samples[0].input.Length).ToArray();
+        this.allXComponents = Enumerable.Range(0, samples[0].input.Length).ToArray();
 
         // iterate through all the trees
         Parallel.For(0, treeCount, (treeIndex) =>
         {
-            // create a local random instance (for thread safety)
-            Random random = new Random();
-
-            // create a list of random samples
-            List<Sample> randomSamples = new List<Sample>();
-
-            // randomly resample with replacement up to sample count
-            for (int sampleIndex = 0; sampleIndex < samples.Count; sampleIndex++)
-            {
-                int randomIndex = random.Next(samples.Count);
-                randomSamples.Add(samples[randomIndex]);
-            }
-
-            // randomly shuffle the x components and take the first xComponentCount
-            List<int> randomXComponents = allXComponents.OrderBy(x => random.Next()).Take(xComponentCount).ToList();
-
-            // create random tree
-            RandomTree randomTree = new RandomTree(random, randomSamples, randomXComponents);
-
-            // lock the random trees list and add the random tree
-            lock (randomTreesLock)
-            {
-                randomTrees.Add(randomTree);
-            }
+            AddTree(samples);   
         });
+    }
+
+    public void AddTree(List<Sample> samples)
+    {
+        // create a local random instance (for thread safety)
+        Random random = new Random();
+
+        // create a list of random samples
+        List<Sample> randomSamples = new List<Sample>();
+
+        // randomly resample with replacement up to sample count
+        for (int sampleIndex = 0; sampleIndex < samples.Count; sampleIndex++)
+        {
+            int randomIndex = random.Next(samples.Count);
+            randomSamples.Add(samples[randomIndex]);
+        }
+
+        // randomly shuffle the x components and take the first xComponentCount
+        List<int> randomXComponents = allXComponents.OrderBy(x => random.Next()).Take(xComponentCount).ToList();
+
+        // create random tree
+        RandomTree randomTree = new RandomTree(random, randomSamples, randomXComponents, minSamplesPerLeaf);
+
+        // lock the random trees list and add the random tree
+        lock (randomTreesLock)
+        {
+            randomTrees.Add(randomTree);
+        }
     }
 
     public float[] Predict(float[] input)
