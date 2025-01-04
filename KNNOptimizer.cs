@@ -1,13 +1,20 @@
 ﻿public static class KNNOptimizer
 {
-    public static (List<int> bestFeatures, float bestError) DeterministicGreedyFeatureAddition(int k, List<Sample> train, List<Sample> validation, Error.ErrorFunction errorFunction, bool verbose)
+    public static (List<int> bestFeatures, float bestError) DeterministicGreedyFeatureAddition(int k, List<Sample> samples, Error.ErrorFunction errorFunction, int threadCount, bool verbose)
     {
+        ParallelOptions parallelOptions = new ParallelOptions();
+        parallelOptions.MaxDegreeOfParallelism = threadCount;
+
         // track the best result
         List<int> bestFeatures = new List<int>();
         float bestError = float.PositiveInfinity;
 
         // get the feature count
-        int featureCount = train[0].input.Length;
+        int featureCount = samples[0].input.Length;
+
+        // create locks
+        object consoleLock = new object();
+        object bestLock = new object();
 
         // loop until no more improvements
         bool improved = true;
@@ -26,13 +33,32 @@
                 break;
             }
 
+            int bestFeatureAddition = -1;
+            float bestAdditionError = bestError;
+
             // iterate over features to add
-            for (int featureIndex = 0; featureIndex < featureCount; featureIndex++)
+            Parallel.For(0, featureCount, parallelOptions, (featureIndex) =>
             {
                 // if this feature is already present skip it
                 if (bestFeatures.Contains(featureIndex))
                 {
-                    continue;
+                    if (verbose)
+                    {
+                        lock (consoleLock)
+                        {
+                            Console.WriteLine($"Skipping Addition (Already Included): {featureIndex}");
+                        }
+                    }
+
+                    return;
+                }
+
+                if (verbose)
+                {
+                    lock (consoleLock)
+                    {
+                        Console.WriteLine($"Trying Feature: {featureIndex}");
+                    }
                 }
 
                 // we can try to add this feature index, create a features copy
@@ -42,30 +68,45 @@
                 trialFeatures.Add(featureIndex);
 
                 // create the model
-                KNN knn = new KNN(k, train, trialFeatures);
+                KNN knn = new KNN(k, samples, trialFeatures);
 
                 // make predictions
                 List<float[]> predictions = new List<float[]>();
-                foreach (Sample sample in validation)
+                foreach (Sample sample in samples)
                 {
-                    predictions.Add(knn.Predict(sample.input));
+                    predictions.Add(knn.Predict(sample.input, excludeZero: true));
                 }
 
                 // compute error
-                float error = errorFunction(validation, predictions);
+                float error = errorFunction(samples, predictions);
 
-                // if this is the best error, update the best features
-                if (error < bestError)
+                // if this is the best addition so far
+                lock (bestLock)
                 {
-                    bestError = error;
-                    bestFeatures = trialFeatures;
-                    improved = true;
-
-                    if (verbose)
+                    if (error < bestAdditionError)
                     {
-                        Console.WriteLine($"New Best, Features: [{string.Join(", ", bestFeatures)}], Error: {bestError}");
+                        // stash it
+                        bestFeatureAddition = featureIndex;
+                        bestAdditionError = error;
+
+                        if (verbose)
+                        {
+                            lock (consoleLock)
+                            {
+                                Console.WriteLine($"Better Feature: {bestFeatureAddition}, Error: {bestAdditionError}");
+                            }
+                        }
                     }
                 }
+            });
+
+            // if we found a better feature addition
+            if (bestFeatureAddition != -1)
+            {
+                // add the best feature
+                bestFeatures.Add(bestFeatureAddition);
+                bestError = bestAdditionError;
+                improved = true;
             }
         }
 

@@ -29,64 +29,22 @@
         return samples;
     }
 
-
     public static void Main()
     {
         List<Sample> mnistTrain = ReadMNIST("D:/data/mnist_train.csv", max: 1000);
-        List<Sample> mnistTest = ReadMNIST("D:/data/mnist_test.csv");
-        int inputComponentCount = mnistTrain[0].input.Length;
+        List<Sample> mnistTest = ReadMNIST("D:/data/mnist_test.csv", max: 1000);
 
-        Random random = new Random();
+        (List<int> bestFeatures, float bestError) = KNNOptimizer.DeterministicGreedyFeatureAddition(k: 1, mnistTrain, Error.ArgmaxError, threadCount: 8, verbose: true);
 
-        TextWriter tw = new StreamWriter("./results.csv", false);
-        tw.WriteLine("minSamplesPerLeaf,nodeCount,treeCount,fitness");
-        object writeLock = new object();
-
-        RandomForest rf = new RandomForest(mnistTrain, xComponentCount: 50, treeCount: 0, minSamplesPerLeaf: 1);
-        for (int treeIndex = 0; treeIndex < 500; treeIndex++)
+        for (int k = 1; k < 25; k++)
         {
-            rf.AddTree(mnistTrain);
-            List<float[]> predictions = new List<float[]>(mnistTest.Count);
-            foreach (Sample sample in mnistTest)
-            {
-                predictions.Add(rf.Predict(sample.input));
-            }
-            float fitness = Fitness(mnistTest, predictions);
-            long nodeCount = rf.CountNodes();
-            lock (writeLock)
-            {
-                Console.WriteLine($"mspl: {1}, nc: {nodeCount} t: {rf.randomTrees.Count}, f: {fitness}");
-                tw.WriteLine($"{1},{nodeCount},{rf.randomTrees.Count},{fitness}");
-                tw.Flush();
-            }
+            KNN knn = new KNN(k: k, mnistTrain, bestFeatures);
+            float error = Error.ArgmaxError(mnistTest, mnistTest.Select(sample => knn.Predict(sample.input, excludeZero: false)).ToList());
+            Console.WriteLine($"k: {k}, Error: {error}");
         }
-        long targetNodeCount = rf.CountNodes();
 
-        Parallel.For(2, 100, i =>
-        {
-            int minSamplesPerLeaf = i;
-            RandomForest rf = new RandomForest(mnistTrain, xComponentCount: 50, treeCount: 0, minSamplesPerLeaf: minSamplesPerLeaf);
-            for (; ;)
-            {
-                rf.AddTree(mnistTrain);
-                List<float[]> predictions = new List<float[]>(mnistTest.Count);
-                foreach (Sample sample in mnistTest)
-                {
-                    predictions.Add(rf.Predict(sample.input));
-                }
-                float fitness = Fitness(mnistTest, predictions);
-                long nodeCount = rf.CountNodes();
-                lock (writeLock)
-                {
-                    Console.WriteLine($"mspl: {minSamplesPerLeaf}, nc: {nodeCount}, t: {rf.randomTrees.Count}, f: {fitness}");
-                    tw.WriteLine($"{minSamplesPerLeaf},{nodeCount},{rf.randomTrees.Count},{fitness}");
-                }
-                if (nodeCount >= targetNodeCount)
-                {
-                    break;
-                }
-            }
-        });
+
+        Console.WriteLine("Press return to exit");
         Console.ReadLine();
     }
 }
