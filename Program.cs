@@ -29,37 +29,6 @@
         return samples;
     }
 
-    public static float Fitness(List<Sample> samples, List<float[]> predictions)
-    {
-        int correct = 0;
-        for (int i = 0; i < samples.Count; i++)
-        {
-            float[] actual = samples[i].output;
-            float[] prediction = predictions[i];
-            float maxValueActual = float.NegativeInfinity;
-            int maxValueActualIndex = -1;
-            float maxValuePrediction = float.NegativeInfinity;
-            int maxValuePredictionIndex = -1;
-            for (int j = 0; j < actual.Length; j++)
-            {
-                if (actual[j] > maxValueActual)
-                {
-                    maxValueActual = actual[j];
-                    maxValueActualIndex = j;
-                }
-                if (prediction[j] > maxValuePrediction)
-                {
-                    maxValuePrediction = prediction[j];
-                    maxValuePredictionIndex = j;
-                }
-            }
-            if (maxValueActualIndex == maxValuePredictionIndex)
-            {
-                correct++;
-            }
-        }
-        return (float)correct / (float)samples.Count;
-    }
 
     public static void Main()
     {
