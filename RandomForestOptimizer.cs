@@ -8,7 +8,7 @@
         }
 
         // create the forest with 1 starting tree
-        RandomForest rf = new RandomForest(samples, xComponentCount, 1, minSamplesPerLeaf);
+        RandomForest rf = new RandomForest(samples, xComponentCount, 1, minSamplesPerLeaf, verbose);
 
         // create a boosted list of samples
         List<Sample> boostedSamples = new List<Sample>(samples);

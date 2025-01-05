@@ -6,7 +6,7 @@ public class RandomForest
     public int minSamplesPerLeaf;
     public List<RandomTree> randomTrees;
 
-    public RandomForest(List<Sample> samples, int xComponentCount, int treeCount, int minSamplesPerLeaf)
+    public RandomForest(List<Sample> samples, int xComponentCount, int treeCount, int minSamplesPerLeaf, bool verbose)
     {
         // confirm we have samples to work with
         if (samples.Count == 0)
@@ -27,6 +27,10 @@ public class RandomForest
         // create the number of trees needed
         for (int treeIndex = 0; treeIndex < treeCount; treeIndex++)
         {
+            if (verbose)
+            {
+                Console.WriteLine($"Random Forest, Building Tree: {treeIndex + 1}/{randomTrees.Count}");
+            }
             AddTree(samples);
         }
     }
