@@ -40,7 +40,7 @@
         
         rf = new RandomForest(mnistTrain, xComponentCount: 50, treeCount: 10000, minSamplesPerLeaf: 1, midpointPartition: true);
         float midpointPartitionError = Error.ArgmaxError(mnistTest, mnistTest.Select(s => rf.Predict(s.input)).ToList());
-        Console.WriteLine($"Random Forest Midpoint Partition Argmax Error: {midpointPartitionError}");
+        Console.WriteLine($"Random Forest Adjacent Midpoint Partition Argmax Error: {midpointPartitionError}");
 
 
         Console.WriteLine("Press return to exit");
