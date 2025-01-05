@@ -5,8 +5,9 @@ public class RandomForest
     public int xComponentCount;
     public int minSamplesPerLeaf;
     public List<RandomTree> randomTrees;
+    public object randomTreesLock;
 
-    public RandomForest(List<Sample> samples, int xComponentCount, int treeCount, int minSamplesPerLeaf, bool verbose)
+    public RandomForest(List<Sample> samples, int xComponentCount, int treeCount, int minSamplesPerLeaf, int threadCount)
     {
         // confirm we have samples to work with
         if (samples.Count == 0)
@@ -24,15 +25,16 @@ public class RandomForest
         // create an array of all the x components
         this.allXComponents = Enumerable.Range(0, samples[0].input.Length).ToArray();
 
+        // create lock
+        this.randomTreesLock = new object();
+
         // create the number of trees needed
-        for (int treeIndex = 0; treeIndex < treeCount; treeIndex++)
-        {
-            if (verbose)
-            {
-                Console.WriteLine($"Random Forest, Building Tree: {treeIndex + 1}/{treeCount}");
-            }
+        ParallelOptions parallelOptions = new ParallelOptions();
+        parallelOptions.MaxDegreeOfParallelism = threadCount;
+        Parallel.For(0, treeCount, parallelOptions, treeIndex =>
+        { 
             AddTree(samples);
-        }
+        });
     }
 
     public void AddTree(List<Sample> samples)
@@ -55,7 +57,12 @@ public class RandomForest
 
         // create random tree
         RandomTree randomTree = new RandomTree(random, randomSamples, randomXComponents, minSamplesPerLeaf);
-        randomTrees.Add(randomTree);
+        
+        // thread safe add it
+        lock (randomTreesLock)
+        {
+            randomTrees.Add(randomTree);
+        }
     }
 
     public float[] Predict(float[] input)
