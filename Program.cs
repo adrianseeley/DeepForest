@@ -34,9 +34,9 @@
         List<Sample> mnistTrain = ReadMNIST("D:/data/mnist_train.csv", max: 1000);
         List<Sample> mnistTest = ReadMNIST("D:/data/mnist_test.csv", max: 1000);
 
-        WeightedRandomForest wrf = RandomForestOptimizer.AdaptiveBoost(mnistTrain, xComponentCount: 50, treeCount: 500, minSamplesPerLeaf: 1, boostingRate: 10f, verbose: true);
+        ResidualRandomForest rrf = new ResidualRandomForest(mnistTrain, xComponentCount: 50, treeCount: 5000, minSamplesPerLeaf: 1, learningRate: 0.001f, verbose: true);
         
-        float error = Error.ArgmaxError(mnistTest, mnistTest.Select(s => wrf.Predict(s.input)).ToList());
+        float error = Error.ArgmaxError(mnistTest, mnistTest.Select(s => rrf.Predict(s.input)).ToList());
         Console.WriteLine($"Error: {error}");
 
         Console.WriteLine("Press return to exit");
