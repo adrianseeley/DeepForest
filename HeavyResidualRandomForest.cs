@@ -1,14 +1,14 @@
 public class HeavyResidualRandomForest
 {
     public int outputComponentCount;
-    public int xComponentCount;
     public int treeCount;
     public int minSamplesPerLeaf;
+    public int splitAttempts;
     public float learningRate;
     public int threadCount;
     public List<RandomForest> randomForests;
 
-    public HeavyResidualRandomForest(List<Sample> samples, int xComponentCount, int forestCount, int treeCount, int minSamplesPerLeaf, float learningRate, int threadCount, bool verbose)
+    public HeavyResidualRandomForest(List<Sample> samples, int forestCount, int treeCount, int minSamplesPerLeaf, int splitAttempts, float learningRate, int threadCount, bool verbose)
     {
         // confirm we have samples to work with
         if (samples.Count == 0)
@@ -17,9 +17,9 @@ public class HeavyResidualRandomForest
         }
 
         this.outputComponentCount = samples[0].output.Length;
-        this.xComponentCount = xComponentCount;
         this.treeCount = treeCount;
         this.minSamplesPerLeaf = minSamplesPerLeaf;
+        this.splitAttempts = splitAttempts;
         this.learningRate = learningRate;
         this.threadCount = threadCount;
 
@@ -74,7 +74,7 @@ public class HeavyResidualRandomForest
     public void AddForest(List<Sample> samples)
     {
         // create a random forest
-        RandomForest randomForest = new RandomForest(samples, xComponentCount, treeCount, minSamplesPerLeaf, threadCount);
+        RandomForest randomForest = new RandomForest(samples, treeCount, minSamplesPerLeaf, splitAttempts, threadCount);
         randomForests.Add(randomForest);
     }
 

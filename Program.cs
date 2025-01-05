@@ -34,7 +34,7 @@
         List<Sample> mnistTrain = ReadMNIST("D:/data/mnist_train.csv", max: 1000);
         List<Sample> mnistTest = ReadMNIST("D:/data/mnist_test.csv", max: 1000);
 
-        ResidualRandomForest rrf = new ResidualRandomForest(mnistTrain, xComponentCount: 784, treeCount: 10000, minSamplesPerLeaf: 10, learningRate: 0.001f, verbose: true);
+        ResidualRandomForest rrf = new ResidualRandomForest(mnistTrain, treeCount: 10000, minSamplesPerLeaf: 10, splitAttempts: 100, learningRate: 0.001f, verbose: true);
         
         float error = Error.ArgmaxError(mnistTest, mnistTest.Select(s => rrf.Predict(s.input)).ToList());
         Console.WriteLine($"Error: {error}");

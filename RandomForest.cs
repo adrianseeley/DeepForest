@@ -1,13 +1,12 @@
 public class RandomForest
 {
     public int outputComponentCount;
-    public int[] allXComponents;
-    public int xComponentCount;
     public int minSamplesPerLeaf;
+    public int splitAttempts;
     public List<RandomTree> randomTrees;
     public object randomTreesLock;
 
-    public RandomForest(List<Sample> samples, int xComponentCount, int treeCount, int minSamplesPerLeaf, int threadCount)
+    public RandomForest(List<Sample> samples, int treeCount, int minSamplesPerLeaf, int splitAttempts, int threadCount)
     {
         // confirm we have samples to work with
         if (samples.Count == 0)
@@ -16,14 +15,11 @@ public class RandomForest
         }
 
         this.outputComponentCount = samples[0].output.Length;
-        this.xComponentCount = xComponentCount;
         this.minSamplesPerLeaf = minSamplesPerLeaf;
+        this.splitAttempts = splitAttempts;
 
         // initialize the random trees list
         this.randomTrees = new List<RandomTree>();
-
-        // create an array of all the x components
-        this.allXComponents = Enumerable.Range(0, samples[0].input.Length).ToArray();
 
         // create lock
         this.randomTreesLock = new object();
@@ -52,11 +48,8 @@ public class RandomForest
             randomSamples.Add(samples[randomIndex]);
         }
 
-        // randomly shuffle the x components and take the first xComponentCount
-        List<int> randomXComponents = allXComponents.OrderBy(x => random.Next()).Take(xComponentCount).ToList();
-
         // create random tree
-        RandomTree randomTree = new RandomTree(random, randomSamples, randomXComponents, minSamplesPerLeaf);
+        RandomTree randomTree = new RandomTree(random, randomSamples, minSamplesPerLeaf, splitAttempts);
         
         // thread safe add it
         lock (randomTreesLock)
