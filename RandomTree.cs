@@ -59,8 +59,16 @@ public class RandomTree
             // if we are using midpoint partitioning
             if (midpointPartition)
             {
-                // take the first two random values, and average them for a midpoint
-                float xValue = (xValues[0] + xValues[1]) / 2f;
+                // sort the x values
+                xValues.Sort();
+
+                // grab a random index up to the last - 1
+                int randomIndex = random.Next(xValues.Count - 1);
+                float a = xValues[randomIndex];
+                float b = xValues[randomIndex + 1];
+
+                // take the two values and get the midpoint
+                float xValue = (a + b) / 2f;
 
                 // gather the left and right samples
                 leftSamples.Clear();
