@@ -2,6 +2,26 @@
 {
     public delegate float ErrorFunction(List<Sample> samples, List<float[]> predictions);
 
+    public static float MeanAbsoluteDistance(float[] a, float[] b)
+    {
+        float distance = 0f;
+        for (int i = 0; i < a.Length; i++)
+        {
+            distance += MathF.Abs(a[i] - b[i]);
+        }
+        return distance / (float)a.Length;
+    }
+
+    public static float EuclideanDistance(float[] a, float[] b)
+    {
+        float distance = 0f;
+        for (int i = 0; i < a.Length; i++)
+        {
+            distance += MathF.Pow(a[i] - b[i], 2);
+        }
+        return MathF.Sqrt(distance);
+    }
+
     public static float MeanSquaredError(List<Sample> samples, List<float[]> predictions)
     {
         float error = 0;
@@ -32,7 +52,7 @@
         return error / (float)samples.Count;
     }
 
-    public static float ArgmaxError(Sample sample, float[] prediction)
+    public static bool ArgmaxEquals(Sample sample, float[] prediction)
     {
         float[] actual = sample.output;
         int actualIndex = -1;
@@ -52,14 +72,7 @@
                 predictionIndex = j;
             }
         }
-        if (actualIndex != predictionIndex)
-        {
-            return 1f;
-        }
-        else
-        {
-            return 0f;
-        }
+        return actualIndex == predictionIndex;
     }
 
     public static float ArgmaxError(List<Sample> samples, List<float[]> predictions)
