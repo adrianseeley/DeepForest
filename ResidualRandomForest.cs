@@ -6,8 +6,11 @@ public class ResidualRandomForest
     public float learningRate;
     public List<RandomTree> randomTrees;
 
-    public ResidualRandomForest(List<Sample> samples, int treeCount, int minSamplesPerLeaf, int splitAttempts, float learningRate, bool verbose)
+    public ResidualRandomForest(List<Sample> samples, int treeCount, int minSamplesPerLeaf, int splitAttempts, float learningRate, int threadCount, bool verbose)
     {
+        ParallelOptions parallelOptions = new ParallelOptions();
+        parallelOptions.MaxDegreeOfParallelism = threadCount;
+
         // confirm we have samples to work with
         if (samples.Count == 0)
         {
@@ -55,15 +58,16 @@ public class ResidualRandomForest
             AddTree(residuals);
 
             // update the accumulators
-            for (int sampleIndex = 0; sampleIndex < samples.Count; sampleIndex++)
+            Parallel.For(0, samples.Count, parallelOptions, i =>
             {
+                int sampleIndex = i;
                 Sample residualSample = residuals[sampleIndex];
                 float[] prediction = randomTrees[treeIndex].Predict(residualSample.input);
-                for (int i = 0; i < prediction.Length; i++)
+                for (int j = 0; j < prediction.Length; j++)
                 {
-                    accumulators[sampleIndex][i] += learningRate * prediction[i];
+                    accumulators[sampleIndex][j] += learningRate * prediction[j];
                 }
-            }
+            });
         }
     }
 

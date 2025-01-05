@@ -1,0 +1,1 @@
+the min leaf size might be set by default to sqrt(sample count), especially for larger datasets.
