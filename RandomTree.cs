@@ -6,7 +6,7 @@ public class RandomTree
     public RandomTree? left;
     public RandomTree? right;
 
-    public RandomTree(Random random, List<Sample> samples, List<int> xComponents, int minSamplesPerLeaf, bool midpointPartition)
+    public RandomTree(Random random, List<Sample> samples, List<int> xComponents, int minSamplesPerLeaf)
     {
         // confirm we have samples to work with
         if (samples.Count == 0)
@@ -56,20 +56,9 @@ public class RandomTree
                 continue;
             }
 
-            // if we are using midpoint partitioning
-            if (midpointPartition)
+            // iterate through the x values
+            foreach (float xValue in xValues)
             {
-                // sort the x values
-                xValues.Sort();
-
-                // grab a random index up to the last - 1
-                int randomIndex = random.Next(xValues.Count - 1);
-                float a = xValues[randomIndex];
-                float b = xValues[randomIndex + 1];
-
-                // take the two values and get the midpoint
-                float xValue = (a + b) / 2f;
-
                 // gather the left and right samples
                 leftSamples.Clear();
                 rightSamples.Clear();
@@ -93,48 +82,11 @@ public class RandomTree
                     splitXValue = xValue;
 
                     // create the left and right children
-                    left = new RandomTree(random, leftSamples, xComponents, minSamplesPerLeaf, midpointPartition);
-                    right = new RandomTree(random, rightSamples, xComponents, minSamplesPerLeaf, midpointPartition);
+                    left = new RandomTree(random, leftSamples, xComponents, minSamplesPerLeaf);
+                    right = new RandomTree(random, rightSamples, xComponents, minSamplesPerLeaf);
 
                     // done
                     return;
-                }
-            }
-            // otherwise on point partitioning
-            else
-            {
-                // iterate through the x values
-                foreach (float xValue in xValues)
-                {
-                    // gather the left and right samples
-                    leftSamples.Clear();
-                    rightSamples.Clear();
-                    foreach (Sample sample in samples)
-                    {
-                        if (sample.input[xComponent] <= xValue)
-                        {
-                            leftSamples.Add(sample);
-                        }
-                        else
-                        {
-                            rightSamples.Add(sample);
-                        }
-                    }
-
-                    // if the split is valid
-                    if (leftSamples.Count > minSamplesPerLeaf && rightSamples.Count > minSamplesPerLeaf)
-                    {
-                        // mark split
-                        splitXComponent = xComponent;
-                        splitXValue = xValue;
-
-                        // create the left and right children
-                        left = new RandomTree(random, leftSamples, xComponents, minSamplesPerLeaf, midpointPartition);
-                        right = new RandomTree(random, rightSamples, xComponents, minSamplesPerLeaf, midpointPartition);
-
-                        // done
-                        return;
-                    }
                 }
             }
         }

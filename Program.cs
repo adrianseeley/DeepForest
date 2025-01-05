@@ -34,14 +34,9 @@
         List<Sample> mnistTrain = ReadMNIST("D:/data/mnist_train.csv", max: 1000);
         List<Sample> mnistTest = ReadMNIST("D:/data/mnist_test.csv", max: 1000);
 
-        RandomForest rf = new RandomForest(mnistTrain, xComponentCount: 50, treeCount: 10000, minSamplesPerLeaf: 1, midpointPartition: false);
-        float onpointPartitionError = Error.ArgmaxError(mnistTest, mnistTest.Select(s => rf.Predict(s.input)).ToList());
-        Console.WriteLine($"Random Forest On Point Partition Argmax Error: {onpointPartitionError}");
-        
-        rf = new RandomForest(mnistTrain, xComponentCount: 50, treeCount: 10000, minSamplesPerLeaf: 1, midpointPartition: true);
-        float midpointPartitionError = Error.ArgmaxError(mnistTest, mnistTest.Select(s => rf.Predict(s.input)).ToList());
-        Console.WriteLine($"Random Forest Adjacent Midpoint Partition Argmax Error: {midpointPartitionError}");
-
+        RandomForest rf = RandomForestOptimizer.AdaptiveBoostArgmax(mnistTrain, xComponentCount: 50, treeCount: 10000, minSamplesPerLeaf: 1, verbose: true);
+        float error = Error.ArgmaxError(mnistTest, mnistTest.Select(s => rf.Predict(s.input)).ToList());
+        Console.WriteLine($"Adaptive Boosted Error: {error}");
 
         Console.WriteLine("Press return to exit");
         Console.ReadLine();

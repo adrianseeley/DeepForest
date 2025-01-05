@@ -32,6 +32,36 @@
         return error / (float)samples.Count;
     }
 
+    public static float ArgmaxError(Sample sample, float[] prediction)
+    {
+        float[] actual = sample.output;
+        int actualIndex = -1;
+        float actualValue = float.NegativeInfinity;
+        int predictionIndex = -1;
+        float predictionValue = float.NegativeInfinity;
+        for (int j = 0; j < actual.Length; j++)
+        {
+            if (actual[j] > actualValue)
+            {
+                actualValue = actual[j];
+                actualIndex = j;
+            }
+            if (prediction[j] > predictionValue)
+            {
+                predictionValue = prediction[j];
+                predictionIndex = j;
+            }
+        }
+        if (actualIndex != predictionIndex)
+        {
+            return 1f;
+        }
+        else
+        {
+            return 0f;
+        }
+    }
+
     public static float ArgmaxError(List<Sample> samples, List<float[]> predictions)
     {
         int errors = 0;

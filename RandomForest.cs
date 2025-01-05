@@ -5,9 +5,8 @@ public class RandomForest
     public int xComponentCount;
     public int minSamplesPerLeaf;
     public List<RandomTree> randomTrees;
-    public object randomTreesLock;
 
-    public RandomForest(List<Sample> samples, int xComponentCount, int treeCount, int minSamplesPerLeaf, bool midpointPartition)
+    public RandomForest(List<Sample> samples, int xComponentCount, int treeCount, int minSamplesPerLeaf)
     {
         // confirm we have samples to work with
         if (samples.Count == 0)
@@ -22,20 +21,17 @@ public class RandomForest
         // initialize the random trees list
         this.randomTrees = new List<RandomTree>();
 
-        // create a lock for the random trees list
-        this.randomTreesLock = new object();
-
         // create an array of all the x components
         this.allXComponents = Enumerable.Range(0, samples[0].input.Length).ToArray();
 
-        // iterate through all the trees
-        Parallel.For(0, treeCount, (treeIndex) =>
+        // create the number of trees needed
+        for (int treeIndex = 0; treeIndex < treeCount; treeIndex++)
         {
-            AddTree(samples, midpointPartition);   
-        });
+            AddTree(samples);
+        }
     }
 
-    public void AddTree(List<Sample> samples, bool midpointPartition)
+    public void AddTree(List<Sample> samples)
     {
         // create a local random instance (for thread safety)
         Random random = new Random();
@@ -54,13 +50,8 @@ public class RandomForest
         List<int> randomXComponents = allXComponents.OrderBy(x => random.Next()).Take(xComponentCount).ToList();
 
         // create random tree
-        RandomTree randomTree = new RandomTree(random, randomSamples, randomXComponents, minSamplesPerLeaf, midpointPartition);
-
-        // lock the random trees list and add the random tree
-        lock (randomTreesLock)
-        {
-            randomTrees.Add(randomTree);
-        }
+        RandomTree randomTree = new RandomTree(random, randomSamples, randomXComponents, minSamplesPerLeaf);
+        randomTrees.Add(randomTree);
     }
 
     public float[] Predict(float[] input)
