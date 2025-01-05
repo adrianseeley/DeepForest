@@ -29,7 +29,7 @@ public class RandomForest
         {
             if (verbose)
             {
-                Console.WriteLine($"Random Forest, Building Tree: {treeIndex + 1}/{randomTrees.Count}");
+                Console.WriteLine($"Random Forest, Building Tree: {treeIndex + 1}/{treeCount}");
             }
             AddTree(samples);
         }
