@@ -34,14 +34,13 @@
         List<Sample> mnistTrain = ReadMNIST("D:/data/mnist_train.csv", max: 1000);
         List<Sample> mnistTest = ReadMNIST("D:/data/mnist_test.csv", max: 1000);
 
-        (List<int> bestFeatures, float bestError) = KNNOptimizer.DeterministicGreedyFeatureAddition(k: 1, mnistTrain, Error.ArgmaxError, threadCount: 8, verbose: true);
-
-        for (int k = 1; k < 25; k++)
-        {
-            KNN knn = new KNN(k: k, mnistTrain, bestFeatures);
-            float error = Error.ArgmaxError(mnistTest, mnistTest.Select(sample => knn.Predict(sample.input, excludeZero: false)).ToList());
-            Console.WriteLine($"k: {k}, Error: {error}");
-        }
+        RandomForest rf = new RandomForest(mnistTrain, xComponentCount: 50, treeCount: 10000, minSamplesPerLeaf: 1, midpointPartition: false);
+        float onpointPartitionError = Error.ArgmaxError(mnistTest, mnistTest.Select(s => rf.Predict(s.input)).ToList());
+        Console.WriteLine($"Random Forest On Point Partition Argmax Error: {onpointPartitionError}");
+        
+        rf = new RandomForest(mnistTrain, xComponentCount: 50, treeCount: 10000, minSamplesPerLeaf: 1, midpointPartition: true);
+        float midpointPartitionError = Error.ArgmaxError(mnistTest, mnistTest.Select(s => rf.Predict(s.input)).ToList());
+        Console.WriteLine($"Random Forest Midpoint Partition Argmax Error: {midpointPartitionError}");
 
 
         Console.WriteLine("Press return to exit");

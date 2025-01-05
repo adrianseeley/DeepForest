@@ -7,7 +7,7 @@ public class RandomForest
     public List<RandomTree> randomTrees;
     public object randomTreesLock;
 
-    public RandomForest(List<Sample> samples, int xComponentCount, int treeCount, int minSamplesPerLeaf)
+    public RandomForest(List<Sample> samples, int xComponentCount, int treeCount, int minSamplesPerLeaf, bool midpointPartition)
     {
         // confirm we have samples to work with
         if (samples.Count == 0)
@@ -31,11 +31,11 @@ public class RandomForest
         // iterate through all the trees
         Parallel.For(0, treeCount, (treeIndex) =>
         {
-            AddTree(samples);   
+            AddTree(samples, midpointPartition);   
         });
     }
 
-    public void AddTree(List<Sample> samples)
+    public void AddTree(List<Sample> samples, bool midpointPartition)
     {
         // create a local random instance (for thread safety)
         Random random = new Random();
@@ -54,7 +54,7 @@ public class RandomForest
         List<int> randomXComponents = allXComponents.OrderBy(x => random.Next()).Take(xComponentCount).ToList();
 
         // create random tree
-        RandomTree randomTree = new RandomTree(random, randomSamples, randomXComponents, minSamplesPerLeaf);
+        RandomTree randomTree = new RandomTree(random, randomSamples, randomXComponents, minSamplesPerLeaf, midpointPartition);
 
         // lock the random trees list and add the random tree
         lock (randomTreesLock)

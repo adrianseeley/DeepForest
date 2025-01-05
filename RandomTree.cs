@@ -6,7 +6,7 @@ public class RandomTree
     public RandomTree? left;
     public RandomTree? right;
 
-    public RandomTree(Random random, List<Sample> samples, List<int> xComponents, int minSamplesPerLeaf)
+    public RandomTree(Random random, List<Sample> samples, List<int> xComponents, int minSamplesPerLeaf, bool midpointPartition)
     {
         // confirm we have samples to work with
         if (samples.Count == 0)
@@ -50,9 +50,18 @@ public class RandomTree
             // create a distinct list of all the x values for the current x component, and shuffle them
             List<float> xValues = samples.Select(s => s.input[xComponent]).Distinct().OrderBy(x => random.Next()).ToList();
 
-            // iterate through the x values
-            foreach (float xValue in xValues)
+            // if there is only 1 x value we cant split it
+            if (xValues.Count == 1)
             {
+                continue;
+            }
+
+            // if we are using midpoint partitioning
+            if (midpointPartition)
+            {
+                // take the first two random values, and average them for a midpoint
+                float xValue = (xValues[0] + xValues[1]) / 2f;
+
                 // gather the left and right samples
                 leftSamples.Clear();
                 rightSamples.Clear();
@@ -76,11 +85,48 @@ public class RandomTree
                     splitXValue = xValue;
 
                     // create the left and right children
-                    left = new RandomTree(random, leftSamples, xComponents, minSamplesPerLeaf);
-                    right = new RandomTree(random, rightSamples, xComponents, minSamplesPerLeaf);
+                    left = new RandomTree(random, leftSamples, xComponents, minSamplesPerLeaf, midpointPartition);
+                    right = new RandomTree(random, rightSamples, xComponents, minSamplesPerLeaf, midpointPartition);
 
                     // done
                     return;
+                }
+            }
+            // otherwise on point partitioning
+            else
+            {
+                // iterate through the x values
+                foreach (float xValue in xValues)
+                {
+                    // gather the left and right samples
+                    leftSamples.Clear();
+                    rightSamples.Clear();
+                    foreach (Sample sample in samples)
+                    {
+                        if (sample.input[xComponent] <= xValue)
+                        {
+                            leftSamples.Add(sample);
+                        }
+                        else
+                        {
+                            rightSamples.Add(sample);
+                        }
+                    }
+
+                    // if the split is valid
+                    if (leftSamples.Count > minSamplesPerLeaf && rightSamples.Count > minSamplesPerLeaf)
+                    {
+                        // mark split
+                        splitXComponent = xComponent;
+                        splitXValue = xValue;
+
+                        // create the left and right children
+                        left = new RandomTree(random, leftSamples, xComponents, minSamplesPerLeaf, midpointPartition);
+                        right = new RandomTree(random, rightSamples, xComponents, minSamplesPerLeaf, midpointPartition);
+
+                        // done
+                        return;
+                    }
                 }
             }
         }
