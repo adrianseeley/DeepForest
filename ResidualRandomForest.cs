@@ -32,6 +32,20 @@ public class ResidualRandomForest
             accumulators.Add(new float[sample.output.Length]);
         }
 
+        // create starting residual samples
+        List<Sample> residuals = new List<Sample>();
+        for (int sampleIndex = 0; sampleIndex < samples.Count; sampleIndex++)
+        {
+            Sample sample = samples[sampleIndex];
+            float[] accumulator = accumulators[sampleIndex];
+            float[] residual = new float[sample.output.Length];
+            for (int i = 0; i < sample.output.Length; i++)
+            {
+                residual[i] = sample.output[i] - accumulator[i];
+            }
+            residuals.Add(new Sample(sample.input, residual));
+        }
+
         // create the number of trees needed
         for (int treeIndex = 0; treeIndex < treeCount; treeIndex++)
         {
@@ -40,32 +54,21 @@ public class ResidualRandomForest
                 Console.WriteLine($"Residual Tree {treeIndex + 1}/{treeCount}");
             }
 
-            // create residual samples
-            List<Sample> residuals = new List<Sample>();
-            for (int sampleIndex = 0; sampleIndex < samples.Count; sampleIndex++)
-            {
-                Sample sample = samples[sampleIndex];
-                float[] accumulator = accumulators[sampleIndex];
-                float[] residual = new float[sample.output.Length];
-                for (int i = 0; i < sample.output.Length; i++)
-                {
-                    residual[i] = sample.output[i] - accumulator[i];
-                }
-                residuals.Add(new Sample(sample.input, residual));
-            }
-
             // create a tree using the residual samples
             AddTree(residuals);
 
-            // update the accumulators
+            // update the accumulators and residuals
             Parallel.For(0, samples.Count, parallelOptions, i =>
             {
                 int sampleIndex = i;
+                Sample sample = samples[sampleIndex];
                 Sample residualSample = residuals[sampleIndex];
+                float[] accumulator = accumulators[sampleIndex];
                 float[] prediction = randomTrees[treeIndex].Predict(residualSample.input);
                 for (int j = 0; j < prediction.Length; j++)
                 {
-                    accumulators[sampleIndex][j] += learningRate * prediction[j];
+                    accumulator[j] += learningRate * prediction[j];
+                    residualSample.output[j] = sample.output[j] - accumulator[j];
                 }
             });
         }
