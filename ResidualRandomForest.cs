@@ -4,10 +4,9 @@ public class ResidualRandomForest
     public int minSamplesPerLeaf;
     public int splitAttempts;
     public float learningRate;
-    public bool resample;
     public List<RandomTree> randomTrees;
 
-    public ResidualRandomForest(List<Sample> samples, int treeCount, int minSamplesPerLeaf, int splitAttempts, float learningRate, bool resample, bool verbose)
+    public ResidualRandomForest(List<Sample> samples, int treeCount, int minSamplesPerLeaf, int splitAttempts, float learningRate, bool verbose)
     {
         // confirm we have samples to work with
         if (samples.Count == 0)
@@ -19,7 +18,6 @@ public class ResidualRandomForest
         this.minSamplesPerLeaf = minSamplesPerLeaf;
         this.splitAttempts = splitAttempts;
         this.learningRate = learningRate;
-        this.resample = resample;
 
         // initialize the random trees list
         this.randomTrees = new List<RandomTree>();
@@ -74,31 +72,9 @@ public class ResidualRandomForest
 
     public void AddTree(List<Sample> samples)
     {
-        if (resample)
-        {
-            // create a local random instance (for thread safety)
-            Random random = new Random();
-
-            // create a list of random samples
-            List<Sample> randomSamples = new List<Sample>();
-
-            // randomly resample with replacement up to sample count
-            for (int sampleIndex = 0; sampleIndex < samples.Count; sampleIndex++)
-            {
-                int randomIndex = random.Next(samples.Count);
-                randomSamples.Add(samples[randomIndex]);
-            }
-
-            // create random tree
-            RandomTree randomTree = new RandomTree(random, randomSamples, minSamplesPerLeaf, splitAttempts);
-            randomTrees.Add(randomTree);
-        }
-        else
-        {
-            // create random tree
-            RandomTree randomTree = new RandomTree(new Random(), samples, minSamplesPerLeaf, splitAttempts);
-            randomTrees.Add(randomTree);
-        }
+        // create random tree
+        RandomTree randomTree = new RandomTree(new Random(), samples, minSamplesPerLeaf, splitAttempts);
+        randomTrees.Add(randomTree);
     }
 
     public float[] Predict(float[] input)

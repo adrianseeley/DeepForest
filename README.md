@@ -6,3 +6,4 @@ Error: 0.0453 with all the dupes
 dropout, only worse outcomes
 duplication is out
 flip is out
+resample is out

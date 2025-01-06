@@ -34,29 +34,10 @@
         List<Sample> mnistTrain = ReadMNIST("D:/data/mnist_train.csv", max: 1000);
         List<Sample> mnistTest = ReadMNIST("D:/data/mnist_test.csv", max: 1000);
 
-        TextWriter tw = new StreamWriter("./results.csv", append: false);
-        tw.WriteLine("Resample,Error");
 
-        List<bool> configs = new List<bool>();
-        configs.Add(false);
-        configs.Add(true);
-      
-        ParallelOptions po = new ParallelOptions();
-        po.MaxDegreeOfParallelism = 12;
-        object writeLock = new object();
-        for (int i = 0; i < 100; i++)
-        Parallel.ForEach(configs, po, config => {
-            bool testFlag = config;
-            int testInt = testFlag ? 1 : 0;
-            ResidualRandomForest rrf = new ResidualRandomForest(mnistTrain, treeCount: 10000, minSamplesPerLeaf: 15, splitAttempts: 100, learningRate: 0.001f, resample: testFlag, verbose: false);
-            float error = Error.ArgmaxError(mnistTest, mnistTest.Select(s => rrf.Predict(s.input)).ToList());
-            lock (writeLock)
-            {
-                tw.WriteLine($"{testInt},{error}");
-                tw.Flush();
-                Console.WriteLine($"tr: {testInt}, er: {error}");
-            }
-        });
+        ResidualRandomForest rrf = new ResidualRandomForest(mnistTrain, treeCount: 10000, minSamplesPerLeaf: 15, splitAttempts: 100, learningRate: 0.001f, verbose: true);
+        float error = Error.ArgmaxError(mnistTest, mnistTest.Select(s => rrf.Predict(s.input)).ToList());
+        Console.WriteLine($"Test error: {error}");
 
         Console.WriteLine("Press return to exit");
         Console.ReadLine();
