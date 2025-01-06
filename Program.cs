@@ -35,28 +35,25 @@
         List<Sample> mnistTest = ReadMNIST("D:/data/mnist_test.csv", max: 1000);
 
         TextWriter tw = new StreamWriter("./results.csv", append: false);
-        tw.WriteLine("TreeCount,LearningRate,Error");
+        tw.WriteLine("TreeCount,Error");
 
-        List<(float, int)> configs = new List<(float, int)>(); // (learningRate, treeCount)
-        for (float learningRate = 0.001f; learningRate <= 0.1f; learningRate += 0.001f)
+        List<int> configs = new List<int>(); // (treeCount)
+        for (int treeCount = 100; treeCount <= 30000; treeCount += 100)
         {
-            for (int treeCount = 100; treeCount <= 10000; treeCount += 100)
-            {
-                configs.Add((learningRate, treeCount));
-            }
+            configs.Add(treeCount);
         }
       
 
         object writeLock = new object();
         Parallel.ForEach(configs, config => {
-            (float learningRate, int treeCount) = config;
-            ResidualRandomForest rrf = new ResidualRandomForest(mnistTrain, treeCount: treeCount, minSamplesPerLeaf: 15, splitAttempts: 100, learningRate: learningRate, flipRate: 0f, threadCount: 1, verbose: false);
+            int treeCount = config;
+            ResidualRandomForest rrf = new ResidualRandomForest(mnistTrain, treeCount: treeCount, minSamplesPerLeaf: 15, splitAttempts: 100, learningRate: 0.001f, flipRate: 0f, threadCount: 1, verbose: false);
             float error = Error.ArgmaxError(mnistTest, mnistTest.Select(s => rrf.Predict(s.input)).ToList());
             lock (writeLock)
             {
-                tw.WriteLine($"{treeCount},{learningRate},{error}");
+                tw.WriteLine($"{treeCount},{error}");
                 tw.Flush();
-                Console.WriteLine($"tc: {treeCount}, lr: {learningRate}, er: {error}");
+                Console.WriteLine($"tc: {treeCount}, er: {error}");
             }
         });
 
