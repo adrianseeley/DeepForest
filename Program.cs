@@ -55,7 +55,7 @@
         }
 
         List<Sample> normalizedSamples = Sample.Normalize(samples);
-        GraphDiffusion graphDiffusion = new GraphDiffusion(normalizedSamples, diffusionRate: 0.1f, diffusionSteps: 10000);
+        GraphDiffusion graphDiffusion = new GraphDiffusion(normalizedSamples, k: 10, diffusionSteps: 10000);
 
         
 
