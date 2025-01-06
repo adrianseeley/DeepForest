@@ -3,10 +3,11 @@ public class RandomForest
     public int outputComponentCount;
     public int minSamplesPerLeaf;
     public int splitAttempts;
+    public float flipRate;
     public List<RandomTree> randomTrees;
     public object randomTreesLock;
 
-    public RandomForest(List<Sample> samples, int treeCount, int minSamplesPerLeaf, int splitAttempts, int threadCount)
+    public RandomForest(List<Sample> samples, int treeCount, int minSamplesPerLeaf, int splitAttempts, float flipRate, int threadCount)
     {
         // confirm we have samples to work with
         if (samples.Count == 0)
@@ -17,6 +18,7 @@ public class RandomForest
         this.outputComponentCount = samples[0].output.Length;
         this.minSamplesPerLeaf = minSamplesPerLeaf;
         this.splitAttempts = splitAttempts;
+        this.flipRate = flipRate;
 
         // initialize the random trees list
         this.randomTrees = new List<RandomTree>();
@@ -49,7 +51,7 @@ public class RandomForest
         }
 
         // create random tree
-        RandomTree randomTree = new RandomTree(random, randomSamples, minSamplesPerLeaf, splitAttempts);
+        RandomTree randomTree = new RandomTree(random, randomSamples, minSamplesPerLeaf, splitAttempts, flipRate);
         
         // thread safe add it
         lock (randomTreesLock)

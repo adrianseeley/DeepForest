@@ -3,10 +3,11 @@ public class ResidualRandomForest
     public int outputComponentCount;
     public int minSamplesPerLeaf;
     public int splitAttempts;
+    public float flipRate;
     public float learningRate;
     public List<RandomTree> randomTrees;
 
-    public ResidualRandomForest(List<Sample> samples, int treeCount, int minSamplesPerLeaf, int splitAttempts, float learningRate, int threadCount, bool verbose)
+    public ResidualRandomForest(List<Sample> samples, int treeCount, int minSamplesPerLeaf, int splitAttempts, float learningRate, float flipRate, int threadCount, bool verbose)
     {
         ParallelOptions parallelOptions = new ParallelOptions();
         parallelOptions.MaxDegreeOfParallelism = threadCount;
@@ -20,6 +21,7 @@ public class ResidualRandomForest
         this.outputComponentCount = samples[0].output.Length;
         this.minSamplesPerLeaf = minSamplesPerLeaf;
         this.splitAttempts = splitAttempts;
+        this.flipRate = flipRate;
         this.learningRate = learningRate;
 
         // initialize the random trees list
@@ -90,7 +92,7 @@ public class ResidualRandomForest
         }
 
         // create random tree
-        RandomTree randomTree = new RandomTree(random, randomSamples, minSamplesPerLeaf, splitAttempts);
+        RandomTree randomTree = new RandomTree(random, randomSamples, minSamplesPerLeaf, splitAttempts, flipRate);
         randomTrees.Add(randomTree);
     }
 

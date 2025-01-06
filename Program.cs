@@ -31,19 +31,34 @@
 
     public static void Main()
     {
-        List<Sample> mnistTrain = ReadMNIST("D:/data/mnist_train.csv", max: -1);
-        List<Sample> mnistTest = ReadMNIST("D:/data/mnist_test.csv", max: -1);
+        List<Sample> mnistTrain = ReadMNIST("D:/data/mnist_train.csv", max: 1000);
+        List<Sample> mnistTest = ReadMNIST("D:/data/mnist_test.csv", max: 1000);
 
-        List<Sample> train = [
-            .. mnistTrain,
-            //.. Synthetic.DropoutFeatures(mnistTrain, 0.1f, 10),
-            //.. Synthetic.NoiseFeatures(mnistTrain, 128, 10)
-        ];
+        TextWriter tw = new StreamWriter("./results.csv", append: false);
+        tw.WriteLine("TreeCount,LearningRate,Error");
 
-        ResidualRandomForest rrf = new ResidualRandomForest(train, treeCount: 10000, minSamplesPerLeaf: (int)MathF.Sqrt(train.Count), splitAttempts: 100, learningRate: 0.001f, threadCount: 12, verbose: true);
-        
-        float error = Error.ArgmaxError(mnistTest, mnistTest.Select(s => rrf.Predict(s.input)).ToList());
-        Console.WriteLine($"Error: {error}");
+        List<(float, int)> configs = new List<(float, int)>(); // (learningRate, treeCount)
+        for (float learningRate = 0.001f; learningRate <= 0.1f; learningRate += 0.001f)
+        {
+            for (int treeCount = 100; treeCount <= 10000; treeCount += 100)
+            {
+                configs.Add((learningRate, treeCount));
+            }
+        }
+      
+
+        object writeLock = new object();
+        Parallel.ForEach(configs, config => {
+            (float learningRate, int treeCount) = config;
+            ResidualRandomForest rrf = new ResidualRandomForest(mnistTrain, treeCount: treeCount, minSamplesPerLeaf: 15, splitAttempts: 100, learningRate: learningRate, flipRate: 0f, threadCount: 1, verbose: false);
+            float error = Error.ArgmaxError(mnistTest, mnistTest.Select(s => rrf.Predict(s.input)).ToList());
+            lock (writeLock)
+            {
+                tw.WriteLine($"{treeCount},{learningRate},{error}");
+                tw.Flush();
+                Console.WriteLine($"tc: {treeCount}, lr: {learningRate}, er: {error}");
+            }
+        });
 
         Console.WriteLine("Press return to exit");
         Console.ReadLine();

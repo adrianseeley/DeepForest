@@ -6,7 +6,7 @@ public class RandomTree
     public RandomTree? left;
     public RandomTree? right;
 
-    public RandomTree(Random random, List<Sample> samples, int minSamplesPerLeaf, int splitAttempts)
+    public RandomTree(Random random, List<Sample> samples, int minSamplesPerLeaf, int splitAttempts, float flipRate)
     {
         // confirm we have samples to work with
         if (samples.Count == 0)
@@ -58,7 +58,13 @@ public class RandomTree
             rightSamples.Clear();
             foreach (Sample sample in samples)
             {
-                if (sample.input[xComponent] <= xValue)
+                bool flip = false;
+                if (random.NextSingle() < flipRate)
+                {
+                    flip = true;
+                }
+
+                if (sample.input[xComponent] <= xValue && !flip)
                 {
                     leftSamples.Add(sample);
                 }
@@ -76,8 +82,8 @@ public class RandomTree
                 splitXValue = xValue;
 
                 // create the left and right children
-                left = new RandomTree(random, leftSamples, minSamplesPerLeaf, splitAttempts);
-                right = new RandomTree(random, rightSamples, minSamplesPerLeaf, splitAttempts);
+                left = new RandomTree(random, leftSamples, minSamplesPerLeaf, splitAttempts, flipRate);
+                right = new RandomTree(random, rightSamples, minSamplesPerLeaf, splitAttempts, flipRate);
 
                 // done
                 return;
