@@ -24,6 +24,13 @@ public class GraphDiffusion
         DebugDrawNonDiffused();
 
         // we can add non-producing nodes here if needed
+        Random random = new Random();
+        for (int i = 0; i < 3000; i++)
+        {
+            float rx = random.NextSingle();
+            float ry = random.NextSingle();
+            nodes.Add(new GraphDiffusionNode(new float[] { rx, ry }, nodes[0].output.Length));
+        }
 
         // calculate distances between all nodes (we skip a==b which defaults to 0 anyways)
         float[,] distances = new float[nodes.Count, nodes.Count];
@@ -88,7 +95,7 @@ public class GraphDiffusion
                     // for now influence is 1 - normalized distance (this will be updated later)
                     float influenceWeight = 1f - normalizedDistances[nodeIndex, otherNodeIndex];
 
-                    if (influenceWeight < 0.7f)
+                    if (influenceWeight < 0.9f)
                     {
                         influenceWeight *= 0.01f;
                     }
@@ -143,9 +150,9 @@ public class GraphDiffusion
         }
     }
 
-    public static int debugWidth = 100;
-    public static int debugHeight = 100;
-    public static int debugK = 3;
+    public static int debugWidth = 500;
+    public static int debugHeight = 500;
+    public static int debugK = 1;
 
     public void DebugDrawSamples()
     {
