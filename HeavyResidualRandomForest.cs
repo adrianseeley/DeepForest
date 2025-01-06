@@ -76,7 +76,7 @@ public class HeavyResidualRandomForest
     public void AddForest(List<Sample> samples)
     {
         // create a random forest
-        RandomForest randomForest = new RandomForest(samples, treeCount, minSamplesPerLeaf, splitAttempts, flipRate, threadCount);
+        RandomForest randomForest = new RandomForest(samples, treeCount, minSamplesPerLeaf, splitAttempts, threadCount);
         randomForests.Add(randomForest);
     }
 

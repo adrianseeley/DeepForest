@@ -60,7 +60,7 @@
         return wrf;
     }
 
-    public static RandomForest AdaptiveBoostArgmax(List<Sample> samples, int xComponentCount, int treeCount, int minSamplesPerLeaf, float flipRate, bool verbose)
+    public static RandomForest AdaptiveBoostArgmax(List<Sample> samples, int xComponentCount, int treeCount, int minSamplesPerLeaf, bool verbose)
     {
         if (verbose)
         {
@@ -68,7 +68,7 @@
         }
 
         // create the forest with 1 starting tree
-        RandomForest rf = new RandomForest(samples, xComponentCount, 1, minSamplesPerLeaf, flipRate, 1);
+        RandomForest rf = new RandomForest(samples, xComponentCount, 1, minSamplesPerLeaf, 1);
 
         // create a boosted list of samples
         List<Sample> boostedSamples = new List<Sample>(samples);

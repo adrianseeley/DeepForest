@@ -3,15 +3,12 @@ public class ResidualRandomForest
     public int outputComponentCount;
     public int minSamplesPerLeaf;
     public int splitAttempts;
-    public float flipRate;
     public float learningRate;
+    public bool resample;
     public List<RandomTree> randomTrees;
 
-    public ResidualRandomForest(List<Sample> samples, int treeCount, int minSamplesPerLeaf, int splitAttempts, float learningRate, float flipRate, int threadCount, bool verbose)
+    public ResidualRandomForest(List<Sample> samples, int treeCount, int minSamplesPerLeaf, int splitAttempts, float learningRate, bool resample, bool verbose)
     {
-        ParallelOptions parallelOptions = new ParallelOptions();
-        parallelOptions.MaxDegreeOfParallelism = threadCount;
-
         // confirm we have samples to work with
         if (samples.Count == 0)
         {
@@ -21,8 +18,8 @@ public class ResidualRandomForest
         this.outputComponentCount = samples[0].output.Length;
         this.minSamplesPerLeaf = minSamplesPerLeaf;
         this.splitAttempts = splitAttempts;
-        this.flipRate = flipRate;
         this.learningRate = learningRate;
+        this.resample = resample;
 
         // initialize the random trees list
         this.randomTrees = new List<RandomTree>();
@@ -60,9 +57,8 @@ public class ResidualRandomForest
             AddTree(residuals);
 
             // update the accumulators and residuals
-            Parallel.For(0, samples.Count, parallelOptions, i =>
+            for (int sampleIndex = 0; sampleIndex < samples.Count; sampleIndex++)
             {
-                int sampleIndex = i;
                 Sample sample = samples[sampleIndex];
                 Sample residualSample = residuals[sampleIndex];
                 float[] accumulator = accumulators[sampleIndex];
@@ -72,28 +68,37 @@ public class ResidualRandomForest
                     accumulator[j] += learningRate * prediction[j];
                     residualSample.output[j] = sample.output[j] - accumulator[j];
                 }
-            });
+            }
         }
     }
 
     public void AddTree(List<Sample> samples)
     {
-        // create a local random instance (for thread safety)
-        Random random = new Random();
-
-        // create a list of random samples
-        List<Sample> randomSamples = new List<Sample>();
-
-        // randomly resample with replacement up to sample count
-        for (int sampleIndex = 0; sampleIndex < samples.Count; sampleIndex++)
+        if (resample)
         {
-            int randomIndex = random.Next(samples.Count);
-            randomSamples.Add(samples[randomIndex]);
-        }
+            // create a local random instance (for thread safety)
+            Random random = new Random();
 
-        // create random tree
-        RandomTree randomTree = new RandomTree(random, randomSamples, minSamplesPerLeaf, splitAttempts, flipRate);
-        randomTrees.Add(randomTree);
+            // create a list of random samples
+            List<Sample> randomSamples = new List<Sample>();
+
+            // randomly resample with replacement up to sample count
+            for (int sampleIndex = 0; sampleIndex < samples.Count; sampleIndex++)
+            {
+                int randomIndex = random.Next(samples.Count);
+                randomSamples.Add(samples[randomIndex]);
+            }
+
+            // create random tree
+            RandomTree randomTree = new RandomTree(random, randomSamples, minSamplesPerLeaf, splitAttempts);
+            randomTrees.Add(randomTree);
+        }
+        else
+        {
+            // create random tree
+            RandomTree randomTree = new RandomTree(new Random(), samples, minSamplesPerLeaf, splitAttempts);
+            randomTrees.Add(randomTree);
+        }
     }
 
     public float[] Predict(float[] input)
