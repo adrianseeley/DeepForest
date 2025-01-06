@@ -31,8 +31,8 @@
 
     public static void Main()
     {
-        List<Sample> mnistTrain = ReadMNIST("D:/data/mnist_train.csv", max: 1000);
-        List<Sample> mnistTest = ReadMNIST("D:/data/mnist_test.csv", max: 1000);
+        List<Sample> mnistTrain = ReadMNIST("D:/data/mnist_train.csv", max: -1);
+        List<Sample> mnistTest = ReadMNIST("D:/data/mnist_test.csv", max: -1);
 
 
         ResidualRandomForest rrf = new ResidualRandomForest(mnistTrain, treeCount: 10000, minSamplesPerLeaf: 15, splitAttempts: 100, learningRate: 0.001f, verbose: true);
