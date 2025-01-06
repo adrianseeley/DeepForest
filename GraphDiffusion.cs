@@ -19,6 +19,10 @@ public class GraphDiffusion
             nodes.Add(new GraphDiffusionNode(sample));
         }
 
+        // debug draw
+        DebugDrawSamples();
+        DebugDrawNonDiffused();
+
         // we can add non-producing nodes here if needed
 
         // calculate distances between all nodes (we skip a==b which defaults to 0 anyways)
@@ -60,6 +64,9 @@ public class GraphDiffusion
         // make diffusion steps
         for (int diffusionStep = 0; diffusionStep < diffusionSteps; diffusionStep++)
         {
+            // debug draw
+            DebugDraw(diffusionStep);
+
             // iterate through nodes to generate the targets
             for (int nodeIndex = 0; nodeIndex < nodes.Count; nodeIndex++)
             {
@@ -80,6 +87,11 @@ public class GraphDiffusion
 
                     // for now influence is 1 - normalized distance (this will be updated later)
                     float influenceWeight = 1f - normalizedDistances[nodeIndex, otherNodeIndex];
+
+                    if (influenceWeight < 0.7f)
+                    {
+                        influenceWeight *= 0.01f;
+                    }
 
                     // if this other node has a sample, its a producer
                     if (otherNode.sample != null)
@@ -129,6 +141,147 @@ public class GraphDiffusion
                 }
             }
         }
+    }
+
+    public static int debugWidth = 100;
+    public static int debugHeight = 100;
+    public static int debugK = 3;
+
+    public void DebugDrawSamples()
+    {
+        int width = debugWidth;
+        int height = debugHeight;
+        byte[,,] bitmap = Bitmap.Create(width, height);
+
+        // draw samples
+        foreach (GraphDiffusionNode node in nodes)
+        {
+            if (node.sample == null)
+            {
+                continue;
+            }
+            int x = (int)(node.input[0] * width);
+            int y = (int)(node.input[1] * height);
+            byte r = (byte)(node.sample.output[0] * 255);
+            byte b = (byte)(node.sample.output[1] * 255);
+            Bitmap.DrawPixel(bitmap, x, y, r, 0, b);
+        }
+
+        Bitmap.SaveToBMP($"./bmp/samples.bmp", bitmap);
+    }
+
+    public void DebugDrawNonDiffused()
+    {
+        int k = debugK;
+        int width = debugWidth;
+        int height = debugHeight;
+        byte[,,] bitmap = Bitmap.Create(width, height);
+
+        // draw predictions
+        for (int x = 0; x < width; x++)
+        {
+            Console.Write($"\rfixed x: {x}/{width}");
+            Parallel.For(0, height, y =>
+            {
+                float nx = (float)x / (float)width;
+                float ny = (float)y / (float)height;
+                float[] prediction = LookupKAverageNonDiffused(new float[] { nx, ny }, k);
+                byte r = (byte)(prediction[0] * 255);
+                byte b = (byte)(prediction[1] * 255);
+                Bitmap.DrawPixel(bitmap, x, y, r, 0, b);
+            });
+        }
+
+        // draw samples
+        foreach (GraphDiffusionNode node in nodes)
+        {
+            if (node.sample == null)
+            {
+                continue;
+            }
+            int x = (int)(node.input[0] * width);
+            int y = (int)(node.input[1] * height);
+            byte r = (byte)(node.sample.output[0] * 255);
+            byte b = (byte)(node.sample.output[1] * 255);
+            Bitmap.DrawPixel(bitmap, x, y, r, 0, b);
+        }
+
+        Bitmap.SaveToBMP($"./bmp/nondiffused.bmp", bitmap);
+        Console.WriteLine();
+    }
+
+    public void DebugDraw(int diffusionStep)
+    {
+        int k = debugK;
+        int width = debugWidth;
+        int height = debugHeight;
+        byte[,,] bitmap = Bitmap.Create(width, height);
+        
+        // draw predictions
+        for (int x = 0; x < width; x++)
+        {
+            Console.Write($"\rds: {diffusionStep} x: {x}/{width}");
+            Parallel.For(0, height, y =>
+            {
+                float nx = (float)x / (float)width;
+                float ny = (float)y / (float)height;
+                float[] prediction = LookupKAverage(new float[] { nx, ny }, k);
+                byte r = (byte)(prediction[0] * 255);
+                byte b = (byte)(prediction[1] * 255);
+                Bitmap.DrawPixel(bitmap, x, y, r, 0, b);
+            });
+        }
+
+        // draw samples
+        foreach(GraphDiffusionNode node in nodes)
+        {
+            if (node.sample == null)
+            {
+                continue;
+            }
+            int x = (int)(node.input[0] * width);
+            int y = (int)(node.input[1] * height);
+            byte r = (byte)(node.sample.output[0] * 255);
+            byte b = (byte)(node.sample.output[1] * 255);
+            Bitmap.DrawPixel(bitmap, x, y, r, 0, b);
+        }
+
+        Bitmap.SaveToBMP($"./bmp/diffusion_{diffusionStep}.bmp", bitmap);
+        Console.WriteLine();
+    }
+
+    public float[] LookupKAverageNonDiffused(float[] input, int k)
+    {
+        List<(GraphDiffusionNode node, float distance)> nodeDistances = new List<(GraphDiffusionNode node, float distance)>();
+        foreach (GraphDiffusionNode node in nodes)
+        {
+            if (node.sample == null)
+            {
+                continue;
+            }
+            float distance = EuclideanDistance(input, node.input);
+            nodeDistances.Add((node, distance));
+        }
+        nodeDistances.Sort((a, b) => a.distance.CompareTo(b.distance));
+        int minK = Math.Min(k, nodeDistances.Count);
+        float[] output = new float[nodes[0].output.Length];
+        for (int i = 0; i < minK; i++)
+        {
+            GraphDiffusionNode node = nodeDistances[i].node;
+            if (node.sample == null)
+            {
+                throw new Exception("Unreachable.");
+            }
+            for (int j = 0; j < output.Length; j++)
+            {
+                output[j] += node.sample.output[j];
+            }
+        }
+        for (int i = 0; i < output.Length; i++)
+        {
+            output[i] /= minK;
+        }
+        return output;
     }
 
     public float[] LookupKAverage(float[] input, int k)
