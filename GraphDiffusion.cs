@@ -4,18 +4,13 @@
 
 public class GraphDiffusion
 {
-    public static int debugWidth = 1280;
-    public static int debugHeight = 1280;
-    public static int debugK = 10;
-    public static bool pixelNeighboursCalculated = false;
-    public static List<GraphDiffusionNode>[,] pixelNeighbours = new List<GraphDiffusionNode>[debugWidth, debugHeight];
-    public static FFMPEG ffmpeg = new FFMPEG("./result.mp4", 20, debugWidth, debugHeight, FFMPEG.EncodeAs.MP4);
-
-
+    public Random random;
     public List<GraphDiffusionNode> nodes;
 
-    public GraphDiffusion(List<Sample> samples, int k, int diffusionSteps)
+    public GraphDiffusion(List<Sample> samples, int k, int diffusionSteps, int transferRegions)
     {
+        this.random = new Random();
+
         // convert all samples to nodes
         nodes = new List<GraphDiffusionNode>();
         foreach (Sample sample in samples)
@@ -23,19 +18,18 @@ public class GraphDiffusion
             nodes.Add(new GraphDiffusionNode(sample));
         }
 
-        // we can add non-producing nodes here if needed
-        Random random = new Random();
-        for (int i = 0; i < 10000; i++)
+        // add transfer regions
+        for (int i = 0; i < transferRegions; i++)
         {
-            float rx = random.NextSingle();
-            float ry = random.NextSingle();
-            nodes.Add(new GraphDiffusionNode(new float[] { rx, ry }, nodes[0].output.Length));
+            Console.Write($"\rCreating Transfer Region: {i + 1}/{transferRegions}");
+            float[] transferRegionInput = new float[samples[0].input.Length];
+            for (int j = 0; j < transferRegionInput.Length; j++)
+            {
+                transferRegionInput[j] = random.NextSingle();
+            }
+            nodes.Add(new GraphDiffusionNode(transferRegionInput, nodes[0].output.Length));
         }
-
-        // debug stuff
-        CalculatePixelNeighbours();
-        DebugDrawSamples();
-        DebugDrawNonDiffused();
+        Console.WriteLine();
 
         // calculate distances between all nodes (we skip a==b which defaults to 0 anyways)
         float[,] distances = new float[nodes.Count, nodes.Count];
@@ -43,21 +37,25 @@ public class GraphDiffusion
         float distanceMax = float.NegativeInfinity;
         for (int a = 0; a < nodes.Count; a++)
         {
-            for (int b = a + 1; b < nodes.Count; b++)
+            Console.Write($"\rCalculating Distances: {a + 1}/{nodes.Count}");
+            Parallel.For(a + 1, nodes.Count, b =>
             {
                 float distance = EuclideanDistance(nodes[a].input, nodes[b].input);
                 distances[a, b] = distance;
                 distances[b, a] = distance;
                 distanceMin = MathF.Min(distanceMin, distance);
                 distanceMax = MathF.Max(distanceMax, distance);
-            }
+            });
         }
         float distanceRange = distanceMax - distanceMin;
+
+        Console.WriteLine();
 
         // calculate normalized distances between all nodes (again skipping a==b which defaults to 0)
         float[,] normalizedDistances = new float[nodes.Count, nodes.Count];
         for (int a = 0; a < nodes.Count; a++)
         {
+            Console.Write($"\rNormalizing Distances: {a + 1}/{nodes.Count}");
             for (int b = a + 1; b < nodes.Count; b++)
             {
                 float normalizedDistance = (distances[a, b] - distanceMin) / distanceRange;
@@ -65,10 +63,13 @@ public class GraphDiffusion
                 normalizedDistances[b, a] = normalizedDistance;
             }
         }
+        Console.WriteLine();
 
         // each node requires a list of neighbours to pull from, find those neighbours
         for (int nodeIndex = 0; nodeIndex < nodes.Count; nodeIndex++)
         {
+            Console.Write($"\rFinding Neighbours: {nodeIndex + 1}/{nodes.Count}");
+
             // get the node in question
             GraphDiffusionNode node = nodes[nodeIndex];
             
@@ -94,6 +95,7 @@ public class GraphDiffusion
             // take the k nearest neighbours
             node.neighbours = neighbourDistances.Take(k).Select(a => a.otherNode).ToList();
         }
+        Console.WriteLine();
 
         // create targets
         List<float[]> nodeTargets = new List<float[]>();
@@ -105,10 +107,7 @@ public class GraphDiffusion
         // make diffusion steps
         for (int diffusionStep = 0; diffusionStep < diffusionSteps; diffusionStep++)
         {
-            Console.WriteLine($"diffusion step: {diffusionStep}/{diffusionSteps}");
-
-            // debug draw
-            DebugDraw(diffusionStep);
+            Console.Write($"\rDiffusing: {diffusionStep + 1}/{diffusionSteps}");
 
             // iterate through nodes to generate the targets
             for (int nodeIndex = 0; nodeIndex < nodes.Count; nodeIndex++)
@@ -170,151 +169,10 @@ public class GraphDiffusion
                 }
             }
         }
-
-        ffmpeg.Finish();
-    }
-
-    public void CalculatePixelNeighbours()
-    {
-        Console.WriteLine("calculating pixel neighbours, debug...");
-        for (int x = 0; x < debugWidth; x++)
-        {
-            Console.Write($"\r{x}/{debugWidth}");
-            List<List<GraphDiffusionNode>> pixelNeighboursChild = new List<List<GraphDiffusionNode>>();
-            Parallel.For(0, debugHeight, y =>
-            {
-                float nx = (float)x / (float)debugWidth;
-                float ny = (float)y / (float)debugHeight;
-                List<(GraphDiffusionNode node, float distance)> nodeDistances = new List<(GraphDiffusionNode node, float distance)>();
-                foreach (GraphDiffusionNode node in nodes)
-                {
-                    float distance = EuclideanDistance(new float[] { nx, ny }, node.input);
-                    nodeDistances.Add((node, distance));
-                }
-                nodeDistances.Sort((a, b) => a.distance.CompareTo(b.distance));
-                pixelNeighbours[x, y] = nodeDistances.Take(debugK).Select(i => i.node).ToList();
-            });
-        }
         Console.WriteLine();
     }
 
-    public void DebugDrawSamples()
-    {
-        int width = debugWidth;
-        int height = debugHeight;
-        byte[,,] bitmap = Bitmap.Create(width, height);
-
-        // draw samples
-        foreach (GraphDiffusionNode node in nodes)
-        {
-            if (node.sample == null)
-            {
-                continue;
-            }
-            int x = (int)(node.input[0] * width);
-            int y = (int)(node.input[1] * height);
-            byte r = (byte)(node.sample.output[0] * 255);
-            byte b = (byte)(node.sample.output[1] * 255);
-            Bitmap.DrawPixel(bitmap, x, y, r, 0, b);
-        }
-
-        Bitmap.SaveToBMP($"./bmp/samples.bmp", bitmap);
-    }
-
-    public void DebugDrawNonDiffused()
-    {
-        int k = debugK;
-        int width = debugWidth;
-        int height = debugHeight;
-        byte[,,] bitmap = Bitmap.Create(width, height);
-
-        // draw predictions
-        for (int x = 0; x < width; x++)
-        {
-            Console.Write($"\rfixed x: {x}/{width}");
-            Parallel.For(0, height, y =>
-            {
-                float nx = (float)x / (float)width;
-                float ny = (float)y / (float)height;
-                float[] prediction = LookupKAverageNonDiffused(new float[] { nx, ny }, k);
-                byte r = (byte)(prediction[0] * 255);
-                byte b = (byte)(prediction[1] * 255);
-                Bitmap.DrawPixel(bitmap, x, y, r, 0, b);
-            });
-        }
-
-        // draw samples
-        foreach (GraphDiffusionNode node in nodes)
-        {
-            if (node.sample == null)
-            {
-                continue;
-            }
-            int x = (int)(node.input[0] * width);
-            int y = (int)(node.input[1] * height);
-            byte r = (byte)(node.sample.output[0] * 255);
-            byte b = (byte)(node.sample.output[1] * 255);
-            Bitmap.DrawPixel(bitmap, x, y, r, 0, b);
-        }
-
-        Bitmap.SaveToBMP($"./bmp/nondiffused.bmp", bitmap);
-        Console.WriteLine();
-    }
-
-    public void DebugDraw(int diffusionStep)
-    {
-        int k = debugK;
-        int width = debugWidth;
-        int height = debugHeight;
-        byte[,,] bitmap = Bitmap.Create(width, height);
-        
-        // draw predictions
-        for (int x = 0; x < width; x++)
-        {
-            Parallel.For(0, height, y =>
-            {
-                float[] prediction = AverageNodes(pixelNeighbours[x, y]);
-                byte r = (byte)(prediction[0] * 255);
-                byte b = (byte)(prediction[1] * 255);
-                Bitmap.DrawPixel(bitmap, x, y, r, 0, b);
-            });
-        }
-
-        // draw samples
-        foreach(GraphDiffusionNode node in nodes)
-        {
-            if (node.sample == null)
-            {
-                continue;
-            }
-            int x = (int)(node.input[0] * width);
-            int y = (int)(node.input[1] * height);
-            byte r = (byte)(node.sample.output[0] * 255);
-            byte b = (byte)(node.sample.output[1] * 255);
-            Bitmap.DrawPixel(bitmap, x, y, r, 0, b);
-        }
-
-        ffmpeg.AddFrame(bitmap);
-    }
-
-    public float[] AverageNodes(List<GraphDiffusionNode> nodes)
-    {
-        float[] average = new float[nodes[0].output.Length];
-        foreach (GraphDiffusionNode node in nodes)
-        {
-            for (int i = 0; i < average.Length; i++)
-            {
-                average[i] += node.output[i];
-            }
-        }
-        for (int i = 0; i < average.Length; i++)
-        {
-            average[i] /= nodes.Count;
-        }
-        return average;
-    }
-
-    public float[] LookupKAverageNonDiffused(float[] input, int k)
+    public float[] LookupKNN(float[] input, int k)
     {
         List<(GraphDiffusionNode node, float distance)> nodeDistances = new List<(GraphDiffusionNode node, float distance)>();
         foreach (GraphDiffusionNode node in nodes)
@@ -348,7 +206,7 @@ public class GraphDiffusion
         return output;
     }
 
-    public float[] LookupKAverage(float[] input, int k)
+    public float[] LookupKNNDiffuse(float[] input, int k)
     {
         List<(GraphDiffusionNode node, float distance)> nodeDistances = new List<(GraphDiffusionNode node, float distance)>();
         foreach (GraphDiffusionNode node in nodes)

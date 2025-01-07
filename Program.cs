@@ -31,33 +31,14 @@
 
     public static void Main()
     {
-        //List<Sample> mnistTrain = ReadMNIST("D:/data/mnist_train.csv", max: -1);
-        //List<Sample> mnistTest = ReadMNIST("D:/data/mnist_test.csv", max: -1);
+        /*
+        List<Sample> mnistTrain = ReadMNIST("D:/data/mnist_train.csv", max: 10000);
+        List<Sample> mnistTest = ReadMNIST("D:/data/mnist_test.csv", max: 1000);
+        (List<Sample> normalizedTrain, List<Sample> normalizedTest) = Sample.Conormalize(mnistTrain, mnistTest);
+        */
 
-        try { Directory.Delete("./bmp", true); } catch { }
-        try { Directory.CreateDirectory("./bmp"); } catch { }
+        ProgressionTest2D pt2d = ProgressionTest2D.CreateSpiral(1000, 30, 4f, "D:/data/spiral.mp4", 30, 1280, 1280);
 
-        // 2d spiral every 30 points changes color
-        List<Sample> samples = new List<Sample>();
-        bool color = false;
-        for (int i = 0; i < 1000; i++)
-        {
-            float t = (float)i / 1000.0f * 4.0f * (float)Math.PI;
-            float x = (float)Math.Cos(t) * t;
-            float y = (float)Math.Sin(t) * t;
-            float[] input = new float[] { x, y };
-            float[] output = new float[] { color ? 1 : 0, color ? 0 : 1 };
-            samples.Add(new Sample(input, output));
-            if (i % 30 == 0)
-            {
-                color = !color;
-            }
-        }
-
-        List<Sample> normalizedSamples = Sample.Normalize(samples);
-        GraphDiffusion graphDiffusion = new GraphDiffusion(normalizedSamples, k: 10, diffusionSteps: 10000);
-
-        
 
         Console.WriteLine("Press return to exit");
         Console.ReadLine();

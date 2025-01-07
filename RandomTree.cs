@@ -6,7 +6,7 @@ public class RandomTree
     public RandomTree? left;
     public RandomTree? right;
 
-    public RandomTree(Random random, List<Sample> samples, int minSamplesPerLeaf, int splitAttempts)
+    public RandomTree(List<Sample> samples, int minSamplesPerLeaf, int maxLeafDepth, int maxSplitAttempts, int currentDepth = 0)
     {
         // confirm we have samples to work with
         if (samples.Count == 0)
@@ -15,18 +15,7 @@ public class RandomTree
         }
 
         // create output
-        output = new float[samples[0].output.Length];
-        foreach(Sample sample in samples)
-        {
-            for (int i = 0; i < output.Length; i++)
-            {
-                output[i] += sample.output[i];
-            }
-        }
-        for (int i = 0; i < output.Length; i++)
-        {
-            output[i] /= (float)samples.Count;
-        }
+        output = Sample.AverageOutputs(samples);
 
         // initialize split criteria to null, so if we find no split, we can return
         this.splitXComponent = null;
@@ -34,18 +23,25 @@ public class RandomTree
         this.left = null;
         this.right = null;
 
-        // if we have only 1 sample, no split can be made
-        if (samples.Count == 1)
+        // if we dont have enough samples for two leaves we cant split
+        if (samples.Count < minSamplesPerLeaf * 2)
+        {
+            return;
+        }
+
+        // if this is the max leaf depth we cant split
+        if (currentDepth >= maxLeafDepth)
         {
             return;
         }
 
         // search for the best split
+        Random random = new Random();
         List<Sample> leftSamples = new List<Sample>(samples.Count);
         List<Sample> rightSamples = new List<Sample>(samples.Count);
 
         // try splitting 
-        for (int splitAttempt = 0; splitAttempt < splitAttempts; splitAttempt++)
+        for (int splitAttempt = 0; splitAttempt < maxSplitAttempts; splitAttempt++)
         {
             // choose a random x component
             int xComponent = random.Next(samples[0].input.Length);
@@ -76,8 +72,8 @@ public class RandomTree
                 splitXValue = xValue;
 
                 // create the left and right children
-                left = new RandomTree(random, leftSamples, minSamplesPerLeaf, splitAttempts);
-                right = new RandomTree(random, rightSamples, minSamplesPerLeaf, splitAttempts);
+                left = new RandomTree(leftSamples, minSamplesPerLeaf, maxLeafDepth, maxSplitAttempts, currentDepth + 1);
+                right = new RandomTree(rightSamples, minSamplesPerLeaf, maxLeafDepth, maxSplitAttempts, currentDepth + 1);
 
                 // done
                 return;

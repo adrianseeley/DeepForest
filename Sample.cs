@@ -9,6 +9,17 @@
         this.output = output;
     }
 
+    public static (List<Sample> normalizedSamplesA, List<Sample> normalizedSamplesB) Conormalize(List<Sample> samplesA, List<Sample> samplesB)
+    {
+        List<Sample> jointSamples = new List<Sample>();
+        jointSamples.AddRange(samplesA);
+        jointSamples.AddRange(samplesB);
+        List<Sample> normalizedJointSamples = Normalize(jointSamples);
+        List<Sample> normalizedSamplesA = normalizedJointSamples.GetRange(0, samplesA.Count);
+        List<Sample> normalizedSamplesB = normalizedJointSamples.GetRange(samplesA.Count, samplesB.Count);
+        return (normalizedSamplesA, normalizedSamplesB);
+    }
+
     public static List<Sample> Normalize(List<Sample> samples)
     {
         float[] inputMins = new float[samples[0].input.Length];
@@ -67,15 +78,83 @@
             float[] input = new float[sample.input.Length];
             for (int i = 0; i < sample.input.Length; i++)
             {
-                input[i] = (sample.input[i] - inputMins[i]) / inputRanges[i];
+                if (inputRanges[i] == 0f)
+                {
+                    input[i] = 0f;
+                }
+                else
+                {
+                    input[i] = (sample.input[i] - inputMins[i]) / inputRanges[i];
+                }
             }
             float[] output = new float[sample.output.Length];
             for (int i = 0; i < sample.output.Length; i++)
             {
-                output[i] = (sample.output[i] - outputMins[i]) / outputRanges[i];
+                if (outputRanges[i] == 0f)
+                {
+                    output[i] = 0f;
+                }
+                else
+                {
+                    output[i] = (sample.output[i] - outputMins[i]) / outputRanges[i];
+                }
             }
             normalized.Add(new Sample(input, output));
         }
         return normalized;
+    }
+
+    public static float[] AverageOutputs(List<Sample> samples)
+    {
+        float[] averageOutput = new float[samples[0].output.Length];
+        foreach (Sample sample in samples)
+        {
+            for (int i = 0; i < sample.output.Length; i++)
+            {
+                averageOutput[i] += sample.output[i];
+            }
+        }
+        for (int i = 0; i < averageOutput.Length; i++)
+        {
+            averageOutput[i] /= samples.Count;
+        }
+        return averageOutput;
+    }
+
+    public static float OutputMeanSquaredError(List<Sample> samples, float[] averageOutput)
+    {
+        float error = 0f;
+        foreach (Sample sample in samples)
+        {
+            for (int i = 0; i < sample.output.Length; i++)
+            {
+                float difference = sample.output[i] - averageOutput[i];
+                error += difference * difference;
+            }
+        }
+        return error / samples.Count;
+    }
+
+    public static float OutputMeanAbsoluteError(List<Sample> samples, float[] averageOutput)
+    {
+        float error = 0f;
+        foreach (Sample sample in samples)
+        {
+            for (int i = 0; i < sample.output.Length; i++)
+            {
+                error += Math.Abs(sample.output[i] - averageOutput[i]);
+            }
+        }
+        return error / samples.Count;
+    }
+
+    public static HashSet<float> HistogramInputComponent(List<Sample> samples, int inputIndex)
+    {
+        HashSet<float> histogram = new HashSet<float>();
+        foreach (Sample sample in samples)
+        {
+            histogram.Add(sample.input[inputIndex]);
+        }
+        return histogram;
     }
 }
