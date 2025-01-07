@@ -21,7 +21,7 @@ public class StandardTree
             throw new ArgumentException("Samples must not be empty.", nameof(samples));
         }
 
-        this.output = Sample.AverageOutputs(samples);
+        this.output = Sample.AverageOutput(samples);
         this.error = CalculateError(samples, output, reduction);
         this.splitXComponent = null;
         this.splitXValue = null;
@@ -81,8 +81,8 @@ public class StandardTree
                 if (leftSamples.Count >= minSamplesPerLeaf && rightSamples.Count >= minSamplesPerLeaf)
                 {
                     // calculate the error
-                    float leftError = CalculateError(leftSamples, Sample.AverageOutputs(leftSamples), reduction);
-                    float rightError = CalculateError(rightSamples, Sample.AverageOutputs(rightSamples), reduction);
+                    float leftError = CalculateError(leftSamples, Sample.AverageOutput(leftSamples), reduction);
+                    float rightError = CalculateError(rightSamples, Sample.AverageOutput(rightSamples), reduction);
                     float leftWeight = (float)leftSamples.Count / samples.Count;
                     float rightWeight = (float)rightSamples.Count / samples.Count;
                     float splitError = (leftWeight * leftError) + (rightWeight * rightError);

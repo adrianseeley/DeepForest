@@ -15,7 +15,7 @@ public class RandomTree
         }
 
         // create output
-        output = Sample.AverageOutputs(samples);
+        output = Sample.AverageOutput(samples);
 
         // initialize split criteria to null, so if we find no split, we can return
         this.splitXComponent = null;

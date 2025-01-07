@@ -104,7 +104,7 @@
         return normalized;
     }
 
-    public static float[] AverageOutputs(List<Sample> samples)
+    public static float[] AverageOutput(List<Sample> samples)
     {
         float[] averageOutput = new float[samples[0].output.Length];
         foreach (Sample sample in samples)

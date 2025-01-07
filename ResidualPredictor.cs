@@ -6,7 +6,7 @@
     public List<Sample> residuals;
     public List<Model> models;
 
-    public ResidualPredictor(List<Sample> samples, float learningRate, int modelCount)
+    public ResidualPredictor(List<Sample> samples, float learningRate)
     {
         this.samples = samples;
         this.learningRate = learningRate;
@@ -24,6 +24,10 @@
             residuals.Add(new Sample(sample.input, residual));
         }
         this.models = new List<Model>();
+    }
+
+    public void Build(int modelCount)
+    {
         for (int modelIndex = 0; modelIndex < modelCount; modelIndex++)
         {
             AddModel();
