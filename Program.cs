@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Net.Http.Headers;
+using System.Reflection;
 
 public class Program
 {
@@ -34,7 +35,7 @@ public class Program
     public static void Main()
     {
         
-        List<Sample> mnistTrain = ReadMNIST("D:/data/mnist_train.csv", max: 1000);
+        List<Sample> mnistTrain = ReadMNIST("D:/data/mnist_train.csv", max: 10000);
         List<Sample> mnistTest = ReadMNIST("D:/data/mnist_test.csv", max: 1000);
         (List<Sample> normalizedTrain, List<Sample> normalizedTest) = Sample.Conormalize(mnistTrain, mnistTest);
 
@@ -45,47 +46,28 @@ public class Program
             ))
         );*/
 
-        Model model =
-        new StackAggregator(
-            verbose: true, 
-            models: [
-
-                .. Model.Create(2, () =>
-                    new ConcatAggregator(
-                        verbose: true, 
-                        models: Model.Create(50, () => 
-                            new BootstrapAggregator(
-                                featurePercentPerBag: 0.5f, 
-                                models: Model.Create(500, () => 
-                                    new RandomTree(
-                                        minSamplesPerLeaf: 1, 
-                                        maxLeafDepth: null, 
-                                        maxSplitAttempts: 100
-                                    )
-                                )
-                            )
-                        )
-                    )
-                ),
-
-                new BootstrapAggregator(
-                    verbose: true,
-                    featurePercentPerBag: 0.5f,
-                    models: Model.Create(500, () =>
-                        new RandomTree(
-                            minSamplesPerLeaf: 1,
-                            maxLeafDepth: null,
-                            maxSplitAttempts: 100
+        for (int layers = 1; layers <= 20; layers++)
+        {
+            Model model =
+            new ResidualAggregator(
+                learningRate: 1.0f,
+                verbose: false,
+                models: Model.Create(layers, () =>
+                    new BootstrapAggregator(
+                        featurePercentPerBag: 0.9f,
+                        verbose: false,
+                        models: Model.Create(100, () =>
+                            new RandomTree(minSamplesPerLeaf: 1, maxLeafDepth: null, maxSplitAttempts: 100)
                         )
                     )
                 )
-            ]
-        );
+            );
 
-        model.Fit(normalizedTrain);
-        List<float[]> predictions = model.PredictSamples(normalizedTest);
-        float argmaxError = Error.ArgmaxError(normalizedTest, predictions);
-        Console.WriteLine($"Argmax Error: {argmaxError}");
+            model.Fit(normalizedTrain);
+            List<float[]> predictions = model.PredictSamples(normalizedTest);
+            float argmaxError = Error.ArgmaxError(normalizedTest, predictions);
+            Console.WriteLine($"Argmax Error: {argmaxError}, Layers: {layers}");
+        }
 
         Console.WriteLine("Press return to exit");
         Console.ReadLine();

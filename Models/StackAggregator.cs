@@ -31,6 +31,11 @@
             // if this isnt the last model in the stack
             if (modelIndex < models.Count - 1)
             {
+                if (verbose)
+                {
+                    Console.WriteLine($"StackAggregator Predicting model {modelIndex + 1} of {models.Count}");
+                }
+
                 // predict the next samples
                 List<float[]> predictions = new List<float[]>(nextSamples.Count);
                 foreach (Sample sample in nextSamples)
