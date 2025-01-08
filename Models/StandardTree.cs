@@ -13,7 +13,7 @@ public class StandardTree
     public StandardTree? left;
     public StandardTree? right;
 
-    public StandardTree(List<Sample> samples, int minSamplesPerLeaf, int maxLeafDepth, Reduction reduction, int currentDepth = 0)
+    public StandardTree(List<Sample> samples, List<int> features, int minSamplesPerLeaf, int maxLeafDepth, Reduction reduction, int currentDepth = 0)
     {
         // confirm we have samples to work with
         if (samples.Count == 0)
@@ -48,7 +48,7 @@ public class StandardTree
         float bestSplitXValue = float.NaN;
 
         // iterate x components
-        for (int xIndex = 0; xIndex < samples[0].input.Length; xIndex++)
+        foreach(int xIndex in features)
         {
             // get unique x values
             HashSet<float> xValues = Sample.HistogramInputComponent(samples, xIndex);
@@ -121,8 +121,8 @@ public class StandardTree
             }
 
             // create the left and right children
-            this.left = new StandardTree(leftSamples, minSamplesPerLeaf, maxLeafDepth, reduction, currentDepth + 1);
-            this.right = new StandardTree(rightSamples, minSamplesPerLeaf, maxLeafDepth, reduction, currentDepth + 1);
+            this.left = new StandardTree(leftSamples, features, minSamplesPerLeaf, maxLeafDepth, reduction, currentDepth + 1);
+            this.right = new StandardTree(rightSamples, features, minSamplesPerLeaf, maxLeafDepth, reduction, currentDepth + 1);
         }
     }
 

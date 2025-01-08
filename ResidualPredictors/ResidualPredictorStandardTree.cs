@@ -12,15 +12,10 @@
         this.reduction = reduction;
     }
 
-    protected override (StandardTree model, List<float[]> predictions) AddModel(List<Sample> residuals)
+    protected override StandardTree AddModel(List<Sample> residuals)
     {
         StandardTree model = new StandardTree(residuals, minSamplesPerLeaf, maxLeafDepth, reduction);
-        List<float[]> predictions = new List<float[]>();
-        foreach (Sample residual in residuals)
-        {
-            predictions.Add(model.Predict(residual.input));
-        }
-        return (model, predictions);
+        return model;
     }
 
     protected override float[] Predict(StandardTree model, float[] input)

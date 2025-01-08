@@ -2,26 +2,6 @@
 {
     public delegate float ErrorFunction(List<Sample> samples, List<float[]> predictions);
 
-    public static float MeanAbsoluteDistance(float[] a, float[] b)
-    {
-        float distance = 0f;
-        for (int i = 0; i < a.Length; i++)
-        {
-            distance += MathF.Abs(a[i] - b[i]);
-        }
-        return distance / (float)a.Length;
-    }
-
-    public static float EuclideanDistance(float[] a, float[] b)
-    {
-        float distance = 0f;
-        for (int i = 0; i < a.Length; i++)
-        {
-            distance += MathF.Pow(a[i] - b[i], 2);
-        }
-        return MathF.Sqrt(distance);
-    }
-
     public static float MeanSquaredError(List<Sample> samples, List<float[]> predictions)
     {
         float error = 0;

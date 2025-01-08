@@ -34,12 +34,17 @@
         }
     }
 
-    protected abstract (Model model, List<float[]> predictions) AddModel(List<Sample> residuals);
+    protected abstract Model AddModel(List<Sample> residuals);
     
     public void AddModel()
     {
-        (Model model, List<float[]> predictions) = AddModel(residuals);
+        Model model = AddModel(residuals);
         models.Add(model);
+        List<float[]> predictions = new List<float[]>(samples.Count);
+        foreach (Sample residual in residuals)
+        {
+            predictions.Add(Predict(model, residual.input));
+        }
         for (int sampleIndex = 0; sampleIndex < samples.Count; sampleIndex++)
         {
             Sample sample = samples[sampleIndex];

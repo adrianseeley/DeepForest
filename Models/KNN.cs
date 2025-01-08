@@ -1,42 +1,26 @@
 ﻿public class KNN
 {
-    public int k;
+    public delegate float DistanceDelegate(float[] a, float[] b, List<int> features);
     public List<Sample> samples;
     public List<int> features;
+    public int k;
+    public DistanceDelegate distanceDelegate;
 
-    public KNN(int k, List<Sample> samples, List<int> features)
+    public KNN(List<Sample> samples, List<int> features, int k, DistanceDelegate distanceDelegate)
     {
-        this.k = k;
         this.samples = samples;
         this.features = features;
+        this.k = k;
+        this.distanceDelegate = distanceDelegate;
     }
 
-    public static float Distance(float[] a, float[] b, List<int> features)
-    {
-        float distance = 0f;
-        foreach(int feature in features)
-        {
-            distance += MathF.Pow(a[feature] - b[feature], 2);
-        }
-        return MathF.Sqrt(distance);
-    }
-
-    public float[] Predict(float[] input, bool excludeZero)
+    public float[] Predict(float[] input)
     {
         List<(Sample sample, float distance)> sampleDistances = new List<(Sample sample, float distance)>();
         foreach(Sample sample in samples)
         {
-            float distance = Distance(input, sample.input, features);
-            if (excludeZero && distance == 0f)
-            {
-                continue;
-            }
+            float distance = distanceDelegate(input, sample.input, features);
             sampleDistances.Add((sample, distance));
-        }
-        // if we have no samples distances, return a zero vector (this can happen for homogenous features and exclude zero)
-        if (sampleDistances.Count == 0)
-        {
-            return new float[samples[0].output.Length];
         }
         sampleDistances.Sort((a, b) => a.distance.CompareTo(b.distance));
         float[] average = new float[samples[0].output.Length];

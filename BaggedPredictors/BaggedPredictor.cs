@@ -1,13 +1,13 @@
-﻿using System;
-
-public abstract class BaggedPredictor<Model>
+﻿public abstract class BaggedPredictor<Model>
 {
     public List<Sample> samples;
+    public int? featuresPerBag;
     public List<Model> models;
 
-    public BaggedPredictor(List<Sample> samples)
+    public BaggedPredictor(List<Sample> samples, int? featuresPerBag)
     {
         this.samples = samples;
+        this.featuresPerBag = featuresPerBag;
         this.models = new List<Model>();
     }
 
@@ -27,11 +27,20 @@ public abstract class BaggedPredictor<Model>
         {
             baggedSamples.Add(samples[random.Next(samples.Count)]);
         }
-        Model model = AddModel(baggedSamples);
+        List<int> baggedFeatures;
+        if (featuresPerBag == null)
+        {
+            baggedFeatures = Enumerable.Range(0, samples[0].input.Length).ToList();
+        }
+        else
+        {
+            baggedFeatures = Enumerable.Range(0, samples[0].input.Length).OrderBy(i => random.Next()).Take(featuresPerBag.Value).ToList();
+        }
+        Model model = AddModel(baggedSamples, baggedFeatures);
         models.Add(model);
     }
 
-    protected abstract Model AddModel(List<Sample> baggedSamples);
+    protected abstract Model AddModel(List<Sample> baggedSamples, List<int> baggedFeatures);
 
     protected abstract float[] Predict(Model model, float[] input);
 

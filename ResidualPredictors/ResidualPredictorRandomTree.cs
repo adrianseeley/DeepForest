@@ -12,15 +12,10 @@
         this.maxSplitAttempts = maxSplitAttempts;
     }
 
-    protected override (RandomTree model, List<float[]> predictions) AddModel(List<Sample> residuals)
+    protected override RandomTree AddModel(List<Sample> residuals)
     {
         RandomTree model = new RandomTree(residuals, minSamplesPerLeaf, maxLeafDepth, maxSplitAttempts);
-        List<float[]> predictions = new List<float[]>();
-        foreach (Sample residual in residuals)
-        {
-            predictions.Add(model.Predict(residual.input));
-        }
-        return (model, predictions);
+        return model;
     }
 
     protected override float[] Predict(RandomTree model, float[] input)

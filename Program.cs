@@ -37,7 +37,21 @@
         (List<Sample> normalizedTrain, List<Sample> normalizedTest) = Sample.Conormalize(mnistTrain, mnistTest);
         */
 
-        int models = 100;
+
+
+        int models = 10;
+        ProgressionTest2D bpknnTest = ProgressionTest2D.CreateSpiral(1000, 30, 4f, $"./bpknn_{models}.mp4", fps: 1, width: 1280, height: 1280);
+        BaggedPredictorKNN bpknn = new BaggedPredictorKNN(bpknnTest.normalizedSamples, k: 3, distanceDelegate: Utility.EuclideanDistance);
+        for (int modelIndex = 0; modelIndex < models; modelIndex++)
+        {
+            Console.WriteLine($"Model {modelIndex + 1}/{models}");
+            bpknn.AddModel();
+            bpknnTest.Frame(bpknn.Predict);
+        }
+        bpknnTest.Finish();
+        return;
+
+
         ProgressionTest2D bprtTest = ProgressionTest2D.CreateSpiral(1000, 30, 4f, $"./bprt_{models}.mp4", fps: 1, width: 1280, height: 1280);
         ProgressionTest2D bpstTest = ProgressionTest2D.CreateSpiral(1000, 30, 4f, $"./bpst_{models}.mp4", fps: 1, width: 1280, height: 1280);
         ProgressionTest2D rprtTest = ProgressionTest2D.CreateSpiral(1000, 30, 4f, $"./rprt_{models}.mp4", fps: 1, width: 1280, height: 1280);

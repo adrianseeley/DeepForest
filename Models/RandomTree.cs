@@ -6,7 +6,7 @@ public class RandomTree
     public RandomTree? left;
     public RandomTree? right;
 
-    public RandomTree(List<Sample> samples, int minSamplesPerLeaf, int maxLeafDepth, int maxSplitAttempts, int currentDepth = 0)
+    public RandomTree(List<Sample> samples, List<int> features, int minSamplesPerLeaf, int maxLeafDepth, int maxSplitAttempts, int currentDepth = 0)
     {
         // confirm we have samples to work with
         if (samples.Count == 0)
@@ -43,18 +43,18 @@ public class RandomTree
         // try splitting 
         for (int splitAttempt = 0; splitAttempt < maxSplitAttempts; splitAttempt++)
         {
-            // choose a random x component
-            int xComponent = random.Next(samples[0].input.Length);
+            // choose a random x index
+            int xIndex = features[random.Next(features.Count)];
 
             // choose a random x value
-            float xValue = samples[random.Next(samples.Count)].input[xComponent];
+            float xValue = samples[random.Next(samples.Count)].input[xIndex];
 
             // gather the left and right samples
             leftSamples.Clear();
             rightSamples.Clear();
             foreach (Sample sample in samples)
             {
-                if (sample.input[xComponent] <= xValue)
+                if (sample.input[xIndex] <= xValue)
                 {
                     leftSamples.Add(sample);
                 }
@@ -68,12 +68,12 @@ public class RandomTree
             if (leftSamples.Count > minSamplesPerLeaf && rightSamples.Count > minSamplesPerLeaf)
             {
                 // mark split
-                splitXComponent = xComponent;
+                splitXComponent = xIndex;
                 splitXValue = xValue;
 
                 // create the left and right children
-                left = new RandomTree(leftSamples, minSamplesPerLeaf, maxLeafDepth, maxSplitAttempts, currentDepth + 1);
-                right = new RandomTree(rightSamples, minSamplesPerLeaf, maxLeafDepth, maxSplitAttempts, currentDepth + 1);
+                left = new RandomTree(leftSamples, features, minSamplesPerLeaf, maxLeafDepth, maxSplitAttempts, currentDepth + 1);
+                right = new RandomTree(rightSamples, features, minSamplesPerLeaf, maxLeafDepth, maxSplitAttempts, currentDepth + 1);
 
                 // done
                 return;

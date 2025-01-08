@@ -104,21 +104,6 @@
         return normalized;
     }
 
-    public static List<Sample> ReselectFeatures(List<Sample> samples, List<int> features)
-    {
-        List<Sample> reselected = new List<Sample>();
-        foreach(Sample sample in samples)
-        {
-            float[] input = new float[features.Count];
-            for (int i = 0; i < features.Count; i++)
-            {
-                input[i] = sample.input[features[i]];
-            }
-            reselected.Add(new Sample(input, sample.output));
-        }
-        return reselected;
-    }
-
     public static float[] AverageOutput(List<Sample> samples)
     {
         float[] averageOutput = new float[samples[0].output.Length];

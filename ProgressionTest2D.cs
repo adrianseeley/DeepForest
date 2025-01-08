@@ -47,7 +47,7 @@
         // draw predictions
         for (int x = 0; x < width; x++)
         {
-            for (int y = 0; y < height; y++)
+            Parallel.For(0, height, y =>
             {
                 float nx = (float)x / (float)width;
                 float ny = (float)y / (float)height;
@@ -56,7 +56,7 @@
                 byte g = (byte)(prediction[1] * 255);
                 byte b = (byte)(prediction[2] * 255);
                 Bitmap.DrawPixel(pixels, x, y, r, g, b);
-            }
+            });
         }
 
         // draw samples
