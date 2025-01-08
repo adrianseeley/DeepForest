@@ -3,12 +3,14 @@
     public List<Model> models;
     public float learningRate;
     public int? outputLength;
+    public bool verbose;
 
-    public ResidualAggregator(List<Model> models, float learningRate)
+    public ResidualAggregator(float learningRate, List<Model> models, bool verbose = false)
     {
         this.models = models;
         this.learningRate = learningRate;
         this.outputLength = null;
+        this.verbose = verbose;
     }
 
     public override void Fit(List<Sample> samples, List<int> features)
@@ -36,6 +38,11 @@
         // iterate through models
         for (int modelIndex = 0; modelIndex < models.Count; modelIndex++)
         {
+            if (verbose)
+            {
+                Console.WriteLine($"ResidualAggregator Fitting model {modelIndex + 1} of {models.Count}");
+            }
+
             // get model
             Model model = models[modelIndex];
 

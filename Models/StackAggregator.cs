@@ -1,10 +1,12 @@
 ﻿public class StackAggregator : Model
 {
     public List<Model> models;
+    public bool verbose;
 
-    public StackAggregator(List<Model> models)
+    public StackAggregator(List<Model> models, bool verbose = false)
     {
         this.models = models;
+        this.verbose = verbose;
     }
 
     public override void Fit(List<Sample> samples, List<int> features)
@@ -12,9 +14,17 @@
         // create a list of next samples
         List<Sample> nextSamples = new List<Sample>(samples);
 
+        // create a list of next features
+        List<int> nextFeatures = new List<int>(features);
+
         // iterate through models in the stack
         for (int modelIndex = 0; modelIndex < models.Count; modelIndex++)
         {
+            if (verbose)
+            {
+                Console.WriteLine($"StackAggregator Fitting model {modelIndex + 1} of {models.Count}");
+            }
+
             // get model at index
             Model model = models[modelIndex];
 

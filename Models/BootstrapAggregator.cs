@@ -1,9 +1,12 @@
-﻿public class BootstrapAggregator : Model
+﻿using System.Reflection.Metadata.Ecma335;
+
+public class BootstrapAggregator : Model
 {
     public List<Model> models;
     public float featurePercentPerBag;
+    public bool verbose;
 
-    public BootstrapAggregator(List<Model> models, float featurePercentPerBag)
+    public BootstrapAggregator(float featurePercentPerBag, List<Model> models, bool verbose = false)
     {
         this.models = models;
         this.featurePercentPerBag = featurePercentPerBag;
@@ -11,6 +14,7 @@
         {
             throw new ArgumentException("featurePercentPerBag must be in the range (0, 1]");
         }
+        this.verbose = verbose;
     }
 
     public override void Fit(List<Sample> samples, List<int> features)
@@ -24,8 +28,16 @@
         featuresPerBag = Math.Min(features.Count, featuresPerBag);
 
         // iterate models
-        foreach (Model model in models)
+        for (int modelIndex = 0; modelIndex < models.Count; modelIndex++)
         {
+            if (verbose)
+            {
+                Console.WriteLine($"BootstrapAggregator Fitting model {modelIndex + 1} of {models.Count}");
+            }
+
+            // get model
+            Model model = models[modelIndex];
+
             // bootstrap samples with replacement
             List<Sample> baggedSamples = new List<Sample>();
             for (int i = 0; i < samples.Count; i++)

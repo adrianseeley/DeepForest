@@ -17,6 +17,16 @@
         return average;
     }
 
+    public static float[] Concat(List<float[]> vectors)
+    {
+        float[] concat = new float[vectors[0].Length * vectors.Count];
+        for (int i = 0; i < vectors.Count; i++)
+        {
+            Array.Copy(vectors[i], 0, concat, i * vectors[i].Length, vectors[i].Length);
+        }
+        return concat;
+    }
+
     public static float MeanAbsoluteDistance(float[] a, float[] b)
     {
         float distance = 0f;
