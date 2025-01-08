@@ -1,12 +1,29 @@
-public class RandomTree
+public class RandomTree : Model
 {
-    public float[] output;
+    public int minSamplesPerLeaf;
+    public int? maxLeafDepth;
+    public int maxSplitAttempts;
+    public int currentDepth;
+    public float[]? output;
     public int? splitXComponent;
     public float? splitXValue;
     public RandomTree? left;
     public RandomTree? right;
 
-    public RandomTree(List<Sample> samples, List<int> features, int minSamplesPerLeaf, int maxLeafDepth, int maxSplitAttempts, int currentDepth = 0)
+    public RandomTree(int minSamplesPerLeaf, int? maxLeafDepth, int maxSplitAttempts, int currentDepth = 0)
+    {
+        this.minSamplesPerLeaf = minSamplesPerLeaf;
+        this.maxLeafDepth = maxLeafDepth;
+        this.maxSplitAttempts = maxSplitAttempts;
+        this.currentDepth = currentDepth;
+        this.output = null;
+        this.splitXComponent = null;
+        this.splitXValue = null;
+        this.left = null;
+        this.right = null;
+    }
+
+    public override void Fit(List<Sample> samples, List<int> features)
     {
         // confirm we have samples to work with
         if (samples.Count == 0)
@@ -16,8 +33,6 @@ public class RandomTree
 
         // create output
         output = Sample.AverageOutput(samples);
-
-        // initialize split criteria to null, so if we find no split, we can return
         this.splitXComponent = null;
         this.splitXValue = null;
         this.left = null;
@@ -30,7 +45,7 @@ public class RandomTree
         }
 
         // if this is the max leaf depth we cant split
-        if (maxLeafDepth != -1 && currentDepth >= maxLeafDepth)
+        if (maxLeafDepth != null && currentDepth >= maxLeafDepth)
         {
             return;
         }
@@ -72,8 +87,12 @@ public class RandomTree
                 splitXValue = xValue;
 
                 // create the left and right children
-                left = new RandomTree(leftSamples, features, minSamplesPerLeaf, maxLeafDepth, maxSplitAttempts, currentDepth + 1);
-                right = new RandomTree(rightSamples, features, minSamplesPerLeaf, maxLeafDepth, maxSplitAttempts, currentDepth + 1);
+                left = new RandomTree(minSamplesPerLeaf, maxLeafDepth, maxSplitAttempts, currentDepth + 1);
+                right = new RandomTree(minSamplesPerLeaf, maxLeafDepth, maxSplitAttempts, currentDepth + 1);
+
+                // fit
+                left.Fit(leftSamples, features);
+                right.Fit(rightSamples, features);
 
                 // done
                 return;
@@ -83,11 +102,15 @@ public class RandomTree
         // reaching here means no split was found
     }
 
-    public float[] Predict(float[] input)
+    public override float[] Predict(float[] input)
     {
         // if this is a leaf node, return the y value
         if (splitXComponent == null)
         {
+            if (output == null)
+            {
+                throw new ArgumentNullException("output");
+            }
             return output;
         }
 
@@ -114,19 +137,6 @@ public class RandomTree
 
             // return the right child prediction
             return right.Predict(input);
-        }
-    }
-
-    public void CountNodes(ref long count)
-    {
-        count++;
-        if (left != null)
-        {
-            left.CountNodes(ref count);
-        }
-        if (right != null)
-        {
-            right.CountNodes(ref count);
         }
     }
 }

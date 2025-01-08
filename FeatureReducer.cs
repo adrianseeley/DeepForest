@@ -1,6 +1,6 @@
 ﻿public static class FeatureReducer
 {
-    public delegate float ModelTestDelegate(List<Sample> train, List<Sample> validate);
+    public delegate float ModelTestDelegate(List<Sample> train, List<Sample> validate, List<int> features);
 
     public static List<int> RemoveHomogenous(List<Sample> samples)
     {
@@ -86,12 +86,8 @@
                 // add the current feature
                 trialFeatures.Add(featureIndex);
 
-                // build the sample sets
-                List<Sample> trainSubset = Sample.ReselectFeatures(train, trialFeatures);
-                List<Sample> validateSubset = Sample.ReselectFeatures(validate, trialFeatures);
-
                 // get error from delegate
-                float error = modelTestDelegate(trainSubset, validateSubset);
+                float error = modelTestDelegate(train, validate, trialFeatures);
 
                 // if this is the best addition so far
                 lock (bestLock)
@@ -140,7 +136,7 @@
         object bestLock = new object();
         int featureCount = train[0].input.Length;
         List<int> bestFeatures = Enumerable.Range(0, featureCount).ToList();
-        float bestError = modelTestDelegate(train, validate);
+        float bestError = modelTestDelegate(train, validate, bestFeatures);
 
         // loop until no more improvements
         bool improved = true;
@@ -193,12 +189,8 @@
                 // subtract the current feature
                 trialFeatures.Remove(featureIndex);
 
-                // build the sample sets
-                List<Sample> trainSubset = Sample.ReselectFeatures(train, trialFeatures);
-                List<Sample> validateSubset = Sample.ReselectFeatures(validate, trialFeatures);
-
                 // get error from delegate
-                float error = modelTestDelegate(trainSubset, validateSubset);
+                float error = modelTestDelegate(train, validate, trialFeatures);
 
                 // if this is the best subtraction so far
                 lock (bestLock)

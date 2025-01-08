@@ -1,4 +1,4 @@
-﻿public class KNN
+﻿public class KNN : Model
 {
     public delegate float DistanceDelegate(float[] a, float[] b, List<int> features);
     public List<Sample> samples;
@@ -6,15 +6,21 @@
     public int k;
     public DistanceDelegate distanceDelegate;
 
-    public KNN(List<Sample> samples, List<int> features, int k, DistanceDelegate distanceDelegate)
+    public KNN(int k, DistanceDelegate distanceDelegate)
     {
-        this.samples = samples;
-        this.features = features;
+        this.samples = new List<Sample>();
+        this.features = new List<int>();
         this.k = k;
         this.distanceDelegate = distanceDelegate;
     }
 
-    public float[] Predict(float[] input)
+    public override void Fit(List<Sample> samples, List<int> features)
+    {
+        this.samples = samples;
+        this.features = features;
+    }
+
+    public override float[] Predict(float[] input)
     {
         List<(Sample sample, float distance)> sampleDistances = new List<(Sample sample, float distance)>();
         foreach(Sample sample in samples)

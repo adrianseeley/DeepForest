@@ -40,8 +40,9 @@
 
 
         int models = 10;
+        List<int> allFeatures = [0, 1];
         ProgressionTest2D bpknnTest = ProgressionTest2D.CreateSpiral(1000, 30, 4f, $"./bpknn_{models}.mp4", fps: 1, width: 1280, height: 1280);
-        BaggedPredictorKNN bpknn = new BaggedPredictorKNN(bpknnTest.normalizedSamples, k: 3, distanceDelegate: Utility.EuclideanDistance);
+        BaggedPredictorKNN bpknn = new BaggedPredictorKNN(bpknnTest.normalizedSamples, 2, k: 3, distanceDelegate: Utility.EuclideanDistance);
         for (int modelIndex = 0; modelIndex < models; modelIndex++)
         {
             Console.WriteLine($"Model {modelIndex + 1}/{models}");
@@ -51,15 +52,15 @@
         bpknnTest.Finish();
         return;
 
-
+        /*
         ProgressionTest2D bprtTest = ProgressionTest2D.CreateSpiral(1000, 30, 4f, $"./bprt_{models}.mp4", fps: 1, width: 1280, height: 1280);
         ProgressionTest2D bpstTest = ProgressionTest2D.CreateSpiral(1000, 30, 4f, $"./bpst_{models}.mp4", fps: 1, width: 1280, height: 1280);
         ProgressionTest2D rprtTest = ProgressionTest2D.CreateSpiral(1000, 30, 4f, $"./rprt_{models}.mp4", fps: 1, width: 1280, height: 1280);
         ProgressionTest2D rpstTest = ProgressionTest2D.CreateSpiral(1000, 30, 4f, $"./rpst_{models}.mp4", fps: 1, width: 1280, height: 1280);
         BaggedPredictorRandomTree bprt = new BaggedPredictorRandomTree(bprtTest.normalizedSamples, minSamplesPerLeaf: 1, maxLeafDepth: -1, maxSplitAttempts: 100);
-        BaggedPredictorStandardTree bpst = new BaggedPredictorStandardTree(bpstTest.normalizedSamples, minSamplesPerLeaf: 1, maxLeafDepth: -1, reduction: StandardTree.Reduction.MeanSquaredError);
+        BaggedPredictorStandardTree bpst = new BaggedPredictorStandardTree(bpstTest.normalizedSamples, minSamplesPerLeaf: 1, maxLeafDepth: -1, minimize: StandardTree.Minimize.MeanSquaredError);
         ResidualPredictorRandomTree rprt = new ResidualPredictorRandomTree(rprtTest.normalizedSamples, learningRate: 0.01f, minSamplesPerLeaf: 1, maxLeafDepth: -1, maxSplitAttempts: 100);
-        ResidualPredictorStandardTree rpst = new ResidualPredictorStandardTree(rpstTest.normalizedSamples, learningRate: 0.01f, minSamplesPerLeaf: 1, maxLeafDepth: -1, reduction: StandardTree.Reduction.MeanSquaredError);
+        ResidualPredictorStandardTree rpst = new ResidualPredictorStandardTree(rpstTest.normalizedSamples, learningRate: 0.01f, minSamplesPerLeaf: 1, maxLeafDepth: -1, minimize: StandardTree.Minimize.MeanSquaredError);
         for (int modelIndex = 0; modelIndex < models; modelIndex++)
         {
             Console.WriteLine($"Model {modelIndex + 1}/{models}");
@@ -93,6 +94,7 @@
         bpstTest.Finish();
         rprtTest.Finish();
         rpstTest.Finish();
+        */
 
         Console.WriteLine("Press return to exit");
         Console.ReadLine();

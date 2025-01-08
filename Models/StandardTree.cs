@@ -1,19 +1,37 @@
-public class StandardTree
+public class StandardTree : Model
 {
-    public enum Reduction
+    public enum Minimize
     {
         MeanSquaredError,
         MeanAbsoluteError
     };
 
-    public float[] output;
-    public float error;
+    public int minSamplesPerLeaf;
+    public int? maxLeafDepth;
+    public Minimize minimize;
+    public int currentDepth;
+    public float[]? output;
+    public float? error;
     public int? splitXComponent;
     public float? splitXValue;
     public StandardTree? left;
     public StandardTree? right;
 
-    public StandardTree(List<Sample> samples, List<int> features, int minSamplesPerLeaf, int maxLeafDepth, Reduction reduction, int currentDepth = 0)
+    public StandardTree(int minSamplesPerLeaf, int? maxLeafDepth, Minimize minimize, int currentDepth = 0)
+    {
+        this.minSamplesPerLeaf = minSamplesPerLeaf;
+        this.maxLeafDepth = maxLeafDepth;
+        this.minimize = minimize;
+        this.currentDepth = currentDepth;
+        this.output = null;
+        this.error = null;
+        this.splitXComponent = null;
+        this.splitXValue = null;
+        this.left = null;
+        this.right = null;
+    }
+
+    public override void Fit(List<Sample> samples, List<int> features)
     {
         // confirm we have samples to work with
         if (samples.Count == 0)
@@ -22,7 +40,7 @@ public class StandardTree
         }
 
         this.output = Sample.AverageOutput(samples);
-        this.error = CalculateError(samples, output, reduction);
+        this.error = CalculateError(samples, output, minimize);
         this.splitXComponent = null;
         this.splitXValue = null;
         this.left = null;
@@ -43,12 +61,12 @@ public class StandardTree
         // search for the best split
         List<Sample> leftSamples = new List<Sample>(samples.Count);
         List<Sample> rightSamples = new List<Sample>(samples.Count);
-        float bestSplitError = error;
+        float bestSplitError = error.Value;
         int bestSplitXComponent = -1;
         float bestSplitXValue = float.NaN;
 
         // iterate x components
-        foreach(int xIndex in features)
+        foreach (int xIndex in features)
         {
             // get unique x values
             HashSet<float> xValues = Sample.HistogramInputComponent(samples, xIndex);
@@ -81,8 +99,8 @@ public class StandardTree
                 if (leftSamples.Count >= minSamplesPerLeaf && rightSamples.Count >= minSamplesPerLeaf)
                 {
                     // calculate the error
-                    float leftError = CalculateError(leftSamples, Sample.AverageOutput(leftSamples), reduction);
-                    float rightError = CalculateError(rightSamples, Sample.AverageOutput(rightSamples), reduction);
+                    float leftError = CalculateError(leftSamples, Sample.AverageOutput(leftSamples), minimize);
+                    float rightError = CalculateError(rightSamples, Sample.AverageOutput(rightSamples), minimize);
                     float leftWeight = (float)leftSamples.Count / samples.Count;
                     float rightWeight = (float)rightSamples.Count / samples.Count;
                     float splitError = (leftWeight * leftError) + (rightWeight * rightError);
@@ -121,29 +139,57 @@ public class StandardTree
             }
 
             // create the left and right children
-            this.left = new StandardTree(leftSamples, features, minSamplesPerLeaf, maxLeafDepth, reduction, currentDepth + 1);
-            this.right = new StandardTree(rightSamples, features, minSamplesPerLeaf, maxLeafDepth, reduction, currentDepth + 1);
+            this.left = new StandardTree(minSamplesPerLeaf, maxLeafDepth, minimize, currentDepth + 1);
+            this.right = new StandardTree(minSamplesPerLeaf, maxLeafDepth, minimize, currentDepth + 1);
+
+            // fit
+            this.left.Fit(leftSamples, features);
+            this.right.Fit(rightSamples, features);
         }
     }
 
-    private static float CalculateError(List<Sample> samples, float[] averageOutput, Reduction reduction)
+    private static float CalculateError(List<Sample> samples, float[] averageOutput, Minimize minimize)
     {
-        switch (reduction)
+        // These error funtions are locally coded because they all compare to a single value, the average output.
+        // Normal error functions require a prediction per sample, which would only add a bunch of garbage collection here.
+        float error;
+        switch (minimize)
         {
-            case Reduction.MeanSquaredError:
-                return Sample.OutputMeanSquaredError(samples, averageOutput);
-            case Reduction.MeanAbsoluteError:
-                return Sample.OutputMeanAbsoluteError(samples, averageOutput);
+            case Minimize.MeanSquaredError:
+                error = 0f;
+                foreach (Sample sample in samples)
+                {
+                    for (int i = 0; i < sample.output.Length; i++)
+                    {
+                        float difference = sample.output[i] - averageOutput[i];
+                        error += difference * difference;
+                    }
+                }
+                return error / samples.Count;
+            case Minimize.MeanAbsoluteError:
+                error = 0f;
+                foreach (Sample sample in samples)
+                {
+                    for (int i = 0; i < sample.output.Length; i++)
+                    {
+                        error += Math.Abs(sample.output[i] - averageOutput[i]);
+                    }
+                }
+                return error / samples.Count;
             default:
                 throw new Exception("Unknown reduction.");
         }
     }
 
-    public float[] Predict(float[] input)
+    public override float[] Predict(float[] input)
     {
         // if this is a leaf node, return the y value
         if (splitXComponent == null)
         {
+            if (output == null)
+            {
+                throw new ArgumentNullException("output");
+            }
             return output;
         }
 

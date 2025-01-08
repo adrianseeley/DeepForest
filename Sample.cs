@@ -121,33 +121,6 @@
         return averageOutput;
     }
 
-    public static float OutputMeanSquaredError(List<Sample> samples, float[] averageOutput)
-    {
-        float error = 0f;
-        foreach (Sample sample in samples)
-        {
-            for (int i = 0; i < sample.output.Length; i++)
-            {
-                float difference = sample.output[i] - averageOutput[i];
-                error += difference * difference;
-            }
-        }
-        return error / samples.Count;
-    }
-
-    public static float OutputMeanAbsoluteError(List<Sample> samples, float[] averageOutput)
-    {
-        float error = 0f;
-        foreach (Sample sample in samples)
-        {
-            for (int i = 0; i < sample.output.Length; i++)
-            {
-                error += Math.Abs(sample.output[i] - averageOutput[i]);
-            }
-        }
-        return error / samples.Count;
-    }
-
     public static HashSet<float> HistogramInputComponent(List<Sample> samples, int inputIndex)
     {
         HashSet<float> histogram = new HashSet<float>();
