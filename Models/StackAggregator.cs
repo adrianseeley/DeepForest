@@ -9,13 +9,10 @@
         this.verbose = verbose;
     }
 
-    public override void Fit(List<Sample> samples, List<int> features)
+    public override void Fit(List<Sample> samples)
     {
         // create a list of next samples
         List<Sample> nextSamples = new List<Sample>(samples);
-
-        // create a list of next features
-        List<int> nextFeatures = new List<int>(features);
 
         // iterate through models in the stack
         for (int modelIndex = 0; modelIndex < models.Count; modelIndex++)
@@ -29,7 +26,7 @@
             Model model = models[modelIndex];
 
             // fit model to next samples
-            model.Fit(nextSamples, features);
+            model.Fit(nextSamples);
 
             // if this isnt the last model in the stack
             if (modelIndex < models.Count - 1)

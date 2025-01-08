@@ -10,7 +10,7 @@
         return models;
     }
 
-    public abstract void Fit(List<Sample> samples, List<int> features);
+    public abstract void Fit(List<Sample> samples);
     public abstract float[] Predict(float[] input);
 
     public List<float[]> PredictSamples(List<Sample> samples)

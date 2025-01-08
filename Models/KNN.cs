@@ -1,23 +1,20 @@
 ﻿public class KNN : Model
 {
-    public delegate float DistanceDelegate(float[] a, float[] b, List<int> features);
+    public delegate float DistanceDelegate(float[] a, float[] b);
     public List<Sample> samples;
-    public List<int> features;
     public int k;
     public DistanceDelegate distanceDelegate;
 
     public KNN(int k, DistanceDelegate distanceDelegate)
     {
         this.samples = new List<Sample>();
-        this.features = new List<int>();
         this.k = k;
         this.distanceDelegate = distanceDelegate;
     }
 
-    public override void Fit(List<Sample> samples, List<int> features)
+    public override void Fit(List<Sample> samples)
     {
         this.samples = samples;
-        this.features = features;
     }
 
     public override float[] Predict(float[] input)
@@ -25,7 +22,7 @@
         List<(Sample sample, float distance)> sampleDistances = new List<(Sample sample, float distance)>();
         foreach(Sample sample in samples)
         {
-            float distance = distanceDelegate(input, sample.input, features);
+            float distance = distanceDelegate(input, sample.input);
             sampleDistances.Add((sample, distance));
         }
         sampleDistances.Sort((a, b) => a.distance.CompareTo(b.distance));

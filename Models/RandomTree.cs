@@ -23,7 +23,7 @@ public class RandomTree : Model
         this.right = null;
     }
 
-    public override void Fit(List<Sample> samples, List<int> features)
+    public override void Fit(List<Sample> samples)
     {
         // confirm we have samples to work with
         if (samples.Count == 0)
@@ -59,7 +59,7 @@ public class RandomTree : Model
         for (int splitAttempt = 0; splitAttempt < maxSplitAttempts; splitAttempt++)
         {
             // choose a random x index
-            int xIndex = features[random.Next(features.Count)];
+            int xIndex = random.Next(samples[0].input.Length);
 
             // choose a random x value
             float xValue = samples[random.Next(samples.Count)].input[xIndex];
@@ -91,8 +91,8 @@ public class RandomTree : Model
                 right = new RandomTree(minSamplesPerLeaf, maxLeafDepth, maxSplitAttempts, currentDepth + 1);
 
                 // fit
-                left.Fit(leftSamples, features);
-                right.Fit(rightSamples, features);
+                left.Fit(leftSamples);
+                right.Fit(rightSamples);
 
                 // done
                 return;

@@ -46,20 +46,19 @@ public class Program
         );*/
 
         Model model =
-        // stacked model
         new StackAggregator(
             verbose: true, 
             models: [
-                // concat layers
-                .. Model.Create(1, () =>
+
+                .. Model.Create(2, () =>
                     new ConcatAggregator(
                         verbose: true, 
                         models: Model.Create(50, () => 
                             new BootstrapAggregator(
                                 featurePercentPerBag: 0.5f, 
-                                models: Model.Create(50, () => 
+                                models: Model.Create(500, () => 
                                     new RandomTree(
-                                        minSamplesPerLeaf: 10, 
+                                        minSamplesPerLeaf: 1, 
                                         maxLeafDepth: null, 
                                         maxSplitAttempts: 100
                                     )
@@ -69,13 +68,12 @@ public class Program
                     )
                 ),
 
-                // final aggregation layer
                 new BootstrapAggregator(
                     verbose: true,
                     featurePercentPerBag: 0.5f,
-                    models: Model.Create(50, () =>
+                    models: Model.Create(500, () =>
                         new RandomTree(
-                            minSamplesPerLeaf: 10,
+                            minSamplesPerLeaf: 1,
                             maxLeafDepth: null,
                             maxSplitAttempts: 100
                         )
@@ -84,7 +82,7 @@ public class Program
             ]
         );
 
-        model.Fit(normalizedTrain, Enumerable.Range(0, normalizedTrain[0].input.Length).ToList());
+        model.Fit(normalizedTrain);
         List<float[]> predictions = model.PredictSamples(normalizedTest);
         float argmaxError = Error.ArgmaxError(normalizedTest, predictions);
         Console.WriteLine($"Argmax Error: {argmaxError}");

@@ -9,7 +9,7 @@
         this.verbose = verbose;
     }
 
-    public override void Fit(List<Sample> samples, List<int> features)
+    public override void Fit(List<Sample> samples)
     {
         // iterate models
         for (int modelIndex = 0; modelIndex < models.Count; modelIndex++)
@@ -23,7 +23,7 @@
             Model model = models[modelIndex];
 
             // fit model
-            model.Fit(samples, features);
+            model.Fit(samples);
         }
     }
 

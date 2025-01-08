@@ -13,7 +13,7 @@
         this.verbose = verbose;
     }
 
-    public override void Fit(List<Sample> samples, List<int> features)
+    public override void Fit(List<Sample> samples)
     {
         // mark the output length (used in Predict)
         this.outputLength = samples[0].output.Length;
@@ -47,7 +47,7 @@
             Model model = models[modelIndex];
 
             // fit model to residuals
-            model.Fit(residuals, features);
+            model.Fit(residuals);
 
             // if this isnt the last model
             if (modelIndex < models.Count - 1)

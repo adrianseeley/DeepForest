@@ -31,7 +31,7 @@ public class StandardTree : Model
         this.right = null;
     }
 
-    public override void Fit(List<Sample> samples, List<int> features)
+    public override void Fit(List<Sample> samples)
     {
         // confirm we have samples to work with
         if (samples.Count == 0)
@@ -66,7 +66,7 @@ public class StandardTree : Model
         float bestSplitXValue = float.NaN;
 
         // iterate x components
-        foreach (int xIndex in features)
+        for (int xIndex = 0; xIndex < samples[0].input.Length; xIndex++)
         {
             // get unique x values
             HashSet<float> xValues = Sample.HistogramInputComponent(samples, xIndex);
@@ -143,8 +143,8 @@ public class StandardTree : Model
             this.right = new StandardTree(minSamplesPerLeaf, maxLeafDepth, minimize, currentDepth + 1);
 
             // fit
-            this.left.Fit(leftSamples, features);
-            this.right.Fit(rightSamples, features);
+            this.left.Fit(leftSamples);
+            this.right.Fit(rightSamples);
         }
     }
 
