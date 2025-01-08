@@ -4,8 +4,8 @@
     public int maxLeafDepth;
     public StandardTree.Reduction reduction;
 
-    public ResidualPredictorStandardTree(List<Sample> samples, float learningRate, int modelCount, int minSamplesPerLeaf, int maxLeafDepth, StandardTree.Reduction reduction) 
-        : base(samples, learningRate, modelCount)
+    public ResidualPredictorStandardTree(List<Sample> samples, float learningRate, int minSamplesPerLeaf, int maxLeafDepth, StandardTree.Reduction reduction) 
+        : base(samples, learningRate)
     {
         this.minSamplesPerLeaf = minSamplesPerLeaf;
         this.maxLeafDepth = maxLeafDepth;

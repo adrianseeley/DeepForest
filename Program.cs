@@ -37,8 +37,48 @@
         (List<Sample> normalizedTrain, List<Sample> normalizedTest) = Sample.Conormalize(mnistTrain, mnistTest);
         */
 
-        ProgressionTest2D pt2d = ProgressionTest2D.CreateSpiral(1000, 30, 4f, "D:/data/spiral.mp4", 30, 1280, 1280);
-
+        int models = 100;
+        ProgressionTest2D bprtTest = ProgressionTest2D.CreateSpiral(1000, 30, 4f, $"./bprt_{models}.mp4", fps: 1, width: 1280, height: 1280);
+        ProgressionTest2D bpstTest = ProgressionTest2D.CreateSpiral(1000, 30, 4f, $"./bpst_{models}.mp4", fps: 1, width: 1280, height: 1280);
+        ProgressionTest2D rprtTest = ProgressionTest2D.CreateSpiral(1000, 30, 4f, $"./rprt_{models}.mp4", fps: 1, width: 1280, height: 1280);
+        ProgressionTest2D rpstTest = ProgressionTest2D.CreateSpiral(1000, 30, 4f, $"./rpst_{models}.mp4", fps: 1, width: 1280, height: 1280);
+        BaggedPredictorRandomTree bprt = new BaggedPredictorRandomTree(bprtTest.normalizedSamples, minSamplesPerLeaf: 1, maxLeafDepth: -1, maxSplitAttempts: 100);
+        BaggedPredictorStandardTree bpst = new BaggedPredictorStandardTree(bpstTest.normalizedSamples, minSamplesPerLeaf: 1, maxLeafDepth: -1, reduction: StandardTree.Reduction.MeanSquaredError);
+        ResidualPredictorRandomTree rprt = new ResidualPredictorRandomTree(rprtTest.normalizedSamples, learningRate: 0.01f, minSamplesPerLeaf: 1, maxLeafDepth: -1, maxSplitAttempts: 100);
+        ResidualPredictorStandardTree rpst = new ResidualPredictorStandardTree(rpstTest.normalizedSamples, learningRate: 0.01f, minSamplesPerLeaf: 1, maxLeafDepth: -1, reduction: StandardTree.Reduction.MeanSquaredError);
+        for (int modelIndex = 0; modelIndex < models; modelIndex++)
+        {
+            Console.WriteLine($"Model {modelIndex + 1}/{models}");
+            Task bprtTask = new Task(() =>
+            {
+                bprt.AddModel();
+                bprtTest.Frame(bprt.Predict);
+            });
+            Task bpstTask = new Task(() =>
+            {
+                bpst.AddModel();
+                bpstTest.Frame(bpst.Predict);
+            });
+            Task rprtTask = new Task(() =>
+            {
+                rprt.AddModel();
+                rprtTest.Frame(rprt.Predict);
+            });
+            Task rpstTask = new Task(() =>
+            {
+                rpst.AddModel();
+                rpstTest.Frame(rpst.Predict);
+            });
+            bprtTask.Start();
+            bpstTask.Start();
+            rprtTask.Start();
+            rpstTask.Start();
+            Task.WaitAll(bprtTask, bpstTask, rprtTask, rpstTask);
+        }
+        bprtTest.Finish();
+        bpstTest.Finish();
+        rprtTest.Finish();
+        rpstTest.Finish();
 
         Console.WriteLine("Press return to exit");
         Console.ReadLine();

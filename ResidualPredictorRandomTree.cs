@@ -4,8 +4,8 @@
     public int maxLeafDepth;
     public int maxSplitAttempts;
 
-    public ResidualPredictorRandomTree(List<Sample> samples, float learningRate, int modelCount, int minSamplesPerLeaf, int maxLeafDepth, int maxSplitAttempts) 
-        : base(samples, learningRate, modelCount)
+    public ResidualPredictorRandomTree(List<Sample> samples, float learningRate, int minSamplesPerLeaf, int maxLeafDepth, int maxSplitAttempts) 
+        : base(samples, learningRate)
     {
         this.minSamplesPerLeaf = minSamplesPerLeaf;
         this.maxLeafDepth = maxLeafDepth;

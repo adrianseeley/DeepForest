@@ -30,7 +30,7 @@ public class RandomTree
         }
 
         // if this is the max leaf depth we cant split
-        if (currentDepth >= maxLeafDepth)
+        if (maxLeafDepth != -1 && currentDepth >= maxLeafDepth)
         {
             return;
         }

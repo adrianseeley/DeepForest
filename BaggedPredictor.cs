@@ -13,17 +13,22 @@ public abstract class BaggedPredictor<Model>
 
     public void Build(int modelCount)
     {
-        Random random = new Random();
         for (int modelIndex = 0; modelIndex < modelCount; modelIndex++)
         {
-            List<Sample> baggedSamples = new List<Sample>();
-            for (int i = 0; i < samples.Count; i++)
-            {
-                baggedSamples.Add(samples[random.Next(samples.Count)]);
-            }
-            Model model = AddModel(baggedSamples);
-            models.Add(model);
+            AddModel();
         }
+    }
+
+    public void AddModel()
+    {
+        Random random = new Random();
+        List<Sample> baggedSamples = new List<Sample>();
+        for (int i = 0; i < samples.Count; i++)
+        {
+            baggedSamples.Add(samples[random.Next(samples.Count)]);
+        }
+        Model model = AddModel(baggedSamples);
+        models.Add(model);
     }
 
     protected abstract Model AddModel(List<Sample> baggedSamples);
