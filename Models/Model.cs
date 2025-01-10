@@ -13,12 +13,21 @@
     public abstract void Fit(List<Sample> samples);
     public abstract float[] Predict(float[] input);
 
-    public List<float[]> PredictSamples(List<Sample> samples)
+    public List<float[]> PredictSamples(List<Sample> samples, bool verbose = false)
     {
         List<float[]> predictions = new List<float[]>(samples.Count);
-        foreach (Sample sample in samples)
+        for (int sampleIndex = 0; sampleIndex < samples.Count; sampleIndex++)
         {
+            Sample sample = samples[sampleIndex];
+            if (verbose)
+            {
+                Console.Write($"\rPredicting sample {sampleIndex + 1} of {samples.Count}");
+            }
             predictions.Add(Predict(sample.input));
+        }
+        if (verbose)
+        {
+            Console.WriteLine();
         }
         return predictions;
     }

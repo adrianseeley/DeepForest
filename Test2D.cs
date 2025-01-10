@@ -1,13 +1,13 @@
-﻿public class ProgressionTest2D
+﻿public class Test2D
 {
     public delegate float[] PredictFunction(float[] input);
     public int width;
     public int height;
     public byte[,,] pixels;
-    public FFMPEG ffmpeg;
     public List<Sample> normalizedSamples;
+    public List<float[]> testInputs;
 
-    public static ProgressionTest2D CreateSpiral(int count, int alternator, float swirls, string filename, int fps, int width, int height)
+    public static Test2D CreateSpiral(int count, int alternator, float swirls, int width, int height)
     {
         // 2d spiral every alternator points changes color r->g->b
         List<Sample> samples = new List<Sample>();
@@ -30,33 +30,49 @@
             }
         }
         List<Sample> normalizedSamples = Sample.Normalize(samples);
-        return new ProgressionTest2D(filename, fps, width, height, normalizedSamples);
+        return new Test2D(width, height, normalizedSamples);
     }
 
-    public ProgressionTest2D(string filename, int fps, int width, int height, List<Sample> normalizedSamples)
+    public Test2D(int width, int height, List<Sample> normalizedSamples)
     {
         this.width = width;
         this.height = height;
         this.pixels = Bitmap.Create(width, height);
-        this.ffmpeg = new FFMPEG(filename, fps, width, height, FFMPEG.EncodeAs.MP4);
         this.normalizedSamples = normalizedSamples;
-    }
-
-    public void Frame(PredictFunction predictFunction)
-    {
-        // draw predictions
+        this.testInputs = new List<float[]>(width * height);
         for (int x = 0; x < width; x++)
         {
-            Parallel.For(0, height, y =>
+            for (int y = 0; y < height; y++)
             {
                 float nx = (float)x / (float)width;
                 float ny = (float)y / (float)height;
-                float[] prediction = predictFunction([nx, ny]);
-                byte r = (byte)(prediction[0] * 255);
-                byte g = (byte)(prediction[1] * 255);
-                byte b = (byte)(prediction[2] * 255);
+                testInputs.Add(new float[] { nx, ny });
+            }
+        }
+    }
+
+    public void Render(float[,] testPredictions)
+    {
+        // draw predictions
+        int i = 0;
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                byte r = (byte)(testPredictions[i, 0] * 255);
+                byte g = (byte)(testPredictions[i, 1] * 255);
+                byte b = (byte)(testPredictions[i, 2] * 255);
                 Bitmap.DrawPixel(pixels, x, y, r, g, b);
-            });
+                i++;
+            }
+        }
+
+        // draw sample backs
+        foreach (Sample normalizedSample in normalizedSamples)
+        {
+            int x = (int)(normalizedSample.input[0] * width);
+            int y = (int)(normalizedSample.input[1] * height);
+            Bitmap.FillRect(pixels, x - 2, y - 2, 5, 5, 0, 0, 0);
         }
 
         // draw samples
@@ -67,15 +83,13 @@
             byte r = (byte)(normalizedSample.output[0] * 255);
             byte g = (byte)(normalizedSample.output[1] * 255);
             byte b = (byte)(normalizedSample.output[2] * 255);
-            Bitmap.FillRect(pixels, x - 2, y - 2, 5, 5, 0, 0, 0);
-            Bitmap.DrawPixel(pixels, x, y, r, g, b);
+            Bitmap.FillRect(pixels, x - 1, y - 1, 3, 3, r, g, b);
         }
-
-        ffmpeg.AddFrame(pixels);
     }
 
-    public void Finish()
+    public void Render(string filename, float[,] testPredictions)
     {
-        ffmpeg.Finish();
+        Render(testPredictions);
+        Bitmap.SaveToBMP(filename, pixels);
     }
 }
