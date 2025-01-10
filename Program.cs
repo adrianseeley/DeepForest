@@ -43,18 +43,20 @@ public class Program
         int width = 2048;
         int height = 2048;
         Test2D test2D = Test2D.CreateSpiral(1000, 30, 4, width, height);
-        float[,] normalizedDistances = ExponentialInterpolation.ComputeNormalizedDistances(test2D.normalizedSamples, test2D.testInputs, verbose: true);
+        float[,] normalizedDistances = Interpolator.ComputeNormalizedDistances(test2D.normalizedSamples, test2D.testInputs, verbose: true);
         float[,] testPredictions = new float[test2D.testInputs.Count, test2D.normalizedSamples[0].output.Length];
 
         int i = 0;
-        for (float exponent = 0.01f; exponent < 65; exponent += 0.01f)
+        float closeWeight = 1f;
+        float farWeight = 0.01f;
+        for (float hingePoint = 0.001f; hingePoint <= 1.0; hingePoint += 0.001f)
         { 
-            Console.WriteLine($"exp {exponent}");
+            Console.WriteLine($"exp {hingePoint}");
             Parallel.For(0, test2D.testInputs.Count, testIndex =>
             {
-                ExponentialInterpolation.Compute(test2D.normalizedSamples, normalizedDistances, testIndex, exponent, testPredictions);
+                Interpolator.ComputeHinge(test2D.normalizedSamples, normalizedDistances, testIndex, hingePoint: hingePoint, closeWeight: closeWeight, farWeight: farWeight, testPredictions);
             });
-            test2D.Render($"./frames/{i}_expo_{exponent}.bmp", testPredictions);
+            test2D.Render($"./frames/{i.ToString().PadLeft(4, '0')}.bmp", testPredictions);
             i++;
         }
        
