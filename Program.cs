@@ -45,47 +45,43 @@ public class Program
         int height = 256;
         Test2D test2D = Test2D.CreateSpiral(1000, 30, 4, width, height);
 
-        for (float exponent = 1f; exponent <= 50f; exponent += 5f)
+        for (float exponent = 1f; exponent <= 500f; exponent += 1f)
         {
-            for (int k = 5; k <= 55; k += 10)
+            Console.WriteLine($"exponent={exponent}");
+            List<(float[] input, float[] output)> testPredictions = new List<(float[], float[])>(width * height);
+            foreach (float[] input in test2D.testInputs)
             {
-                Console.WriteLine($"k={k}, exponent={exponent}");
-                List<(float[] input, float[] output)> testPredictions = new List<(float[], float[])>(width * height);
-                foreach (float[] input in test2D.testInputs)
+                List<(Sample sample, float distance)> sampleDistances = new List<(Sample sample, float distance)>();
+                foreach(Sample sample in test2D.normalizedSamples)
                 {
-                    List<(Sample sample, float distance)> sampleDistances = new List<(Sample sample, float distance)>();
-                    foreach(Sample sample in test2D.normalizedSamples)
-                    {
-                        float distance = Utility.EuclideanDistance(input, sample.input);
-                        sampleDistances.Add((sample, distance));
-                    }
-                    sampleDistances = sampleDistances.OrderBy(sd => sd.distance).Take(k).ToList();
-                    float maxDistance = sampleDistances.Max(sd => sd.distance);
-                    maxDistance = Math.Max(maxDistance, 0.0001f);
-                    List<float> weights = new List<float>();
-                    foreach ((Sample sample, float distance) in sampleDistances)
-                    {
-                        float weight = MathF.Pow(1f - (distance / maxDistance), exponent);
-                        weights.Add(weight);
-                    }
-                    float weightSum = weights.Sum();
-                    int outputLength = sampleDistances[0].sample.output.Length;
-                    float[] output = new float[outputLength];
-                    for (int neighbour = 0; neighbour < sampleDistances.Count; neighbour++)
-                    {
-                        for (int i = 0; i < outputLength; i++)
-                        {
-                            output[i] += sampleDistances[neighbour].sample.output[i] * weights[neighbour];
-                        }
-                    }
+                    float distance = Utility.EuclideanDistance(input, sample.input);
+                    sampleDistances.Add((sample, distance));
+                }
+                float maxDistance = sampleDistances.Max(sd => sd.distance);
+                maxDistance = Math.Max(maxDistance, 0.0001f);
+                List<float> weights = new List<float>();
+                foreach ((Sample sample, float distance) in sampleDistances)
+                {
+                    float weight = MathF.Pow(1f - (distance / maxDistance), exponent);
+                    weights.Add(weight);
+                }
+                float weightSum = weights.Sum();
+                int outputLength = sampleDistances[0].sample.output.Length;
+                float[] output = new float[outputLength];
+                for (int neighbour = 0; neighbour < sampleDistances.Count; neighbour++)
+                {
                     for (int i = 0; i < outputLength; i++)
                     {
-                        output[i] /= weightSum;
+                        output[i] += sampleDistances[neighbour].sample.output[i] * weights[neighbour];
                     }
-                    testPredictions.Add((input, output));
                 }
-                test2D.Render($"./out/exp_{exponent}_k_{k}.bmp", testPredictions);
+                for (int i = 0; i < outputLength; i++)
+                {
+                    output[i] /= weightSum;
+                }
+                testPredictions.Add((input, output));
             }
+            test2D.Render($"./out/exp_{exponent}.bmp", testPredictions);
         }
 
         Console.WriteLine("Press return to exit");
