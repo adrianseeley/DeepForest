@@ -80,30 +80,42 @@ public class Program
         Console.WriteLine();
 
         TextWriter tw = new StreamWriter("results.csv");
-        tw.WriteLine("exponent,correct,accuracy");
-        List<float> exponents = new List<float>();
-        for (float exponent = 0.01f; exponent <= 100f; exponent += 0.01f)
+        tw.WriteLine("decay,correct,accuracy");
+        List<float> decays = new List<float>();
+        for (float decay = 1.0f; decay >= 0f; decay -= 0.001f)
         {
-            exponents.Add(exponent);
+            decays.Add(decay);
         }
         object writeLock = new object();
-        Parallel.ForEach(exponents, exponent =>
-        //for (float exponent = 0.1f; exponent <= 100; exponent += 0.1f)
+        Parallel.ForEach(decays, decay =>
+        //for (float decay = 0.1f; decay <= 100; decay += 0.1f)
         {
             int correct = 0;
             for (int testIndex = 0; testIndex < normalizedTest.Count; testIndex++)
             {
                 Sample testSample = normalizedTest[testIndex];
-                float weightSum = 0f;
-                float[] output = new float[outputLength];
+                
+                List<(Sample trainSample, float distance, float preWeight)> trainSamples = new List<(Sample, float, float)>(normalizedTrain.Count);
                 for (int trainIndex = 0; trainIndex < normalizedTrain.Count; trainIndex++)
                 {
-                    float weight = MathF.Pow(testTrainPreWeights[testIndex, trainIndex], exponent);
+                    float distance = testTrainDistances[testIndex, trainIndex];
+                    float preWeight = testTrainPreWeights[testIndex, trainIndex];
+                    trainSamples.Add((normalizedTrain[trainIndex], distance, preWeight));
+                }
+                trainSamples.Sort((a, b) => a.distance.CompareTo(b.distance));
+
+                float weightSum = 0f;
+                float[] output = new float[outputLength];
+                float multiplier = 1f;
+                for (int trainIndex = 0; trainIndex < trainSamples.Count; trainIndex++)
+                {
+                    float weight = trainSamples[trainIndex].preWeight * multiplier;
                     weightSum += weight;
                     for (int i = 0; i < outputLength; i++)
                     {
-                        output[i] += normalizedTrain[trainIndex].output[i] * weight;
+                        output[i] += trainSamples[trainIndex].trainSample.output[i] * weight;
                     }
+                    multiplier *= decay;
                 }
                 for (int i = 0; i < outputLength; i++)
                 {
@@ -114,8 +126,8 @@ public class Program
             float accuracy = (float)correct / (float)normalizedTest.Count;
             lock (writeLock)
             {
-                Console.WriteLine($"exponent={exponent} correct={correct} accuracy={accuracy}");
-                tw.WriteLine($"{exponent},{correct},{accuracy}");
+                Console.WriteLine($"decay={decay} correct={correct} accuracy={accuracy}");
+                tw.WriteLine($"{decay},{correct},{accuracy}");
                 tw.Flush();
             }
         });
