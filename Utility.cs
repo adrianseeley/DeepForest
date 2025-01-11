@@ -63,6 +63,10 @@
         float weightSum = 0f;
         for (int i = 0; i < a.Length; i++)
         {
+            if (w[i] == 0f)
+            {
+                continue;
+            }
             weightSum += w[i];
             distance += Math.Abs(a[i] - b[i]) * w[i];
         }
