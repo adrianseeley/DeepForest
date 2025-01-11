@@ -39,98 +39,74 @@ public class Program
         (List<Sample> normalizedTrain, List<Sample> normalizedTest) = Sample.Conormalize(mnistTrain, mnistTest);
 
         int outputLength = normalizedTrain[0].output.Length;
-        float[,] testTrainDistances = new float[normalizedTest.Count, normalizedTrain.Count];
-        for (int testIndex = 0; testIndex < normalizedTest.Count; testIndex++)
+        TextWriter tw = new StreamWriter("results.csv");
+        tw.WriteLine("k,correct,accuracy");
+        List<int> ks = new List<int>();
+        for (int k = 1; k < 200; k++)
         {
-            Console.Write($"\rDistance {testIndex + 1}/{normalizedTest.Count}");
-            Parallel.For(0, normalizedTrain.Count, trainIndex =>
-            {
-                float distance = Utility.EuclideanDistance(normalizedTest[testIndex].input, normalizedTrain[trainIndex].input);
-                testTrainDistances[testIndex, trainIndex] = distance;
-            });
-            /*for (int trainIndex = 0; trainIndex < normalizedTrain.Count; trainIndex++)
-            {
-                float distance = Utility.EuclideanDistance(normalizedTest[testIndex].input, normalizedTrain[trainIndex].input);
-                testTrainDistances[testIndex, trainIndex] = distance;
-            }*/
+            ks.Add(k);
         }
-        Console.WriteLine();
-        float[] testMaxDistances = new float[normalizedTest.Count];
-        for (int testIndex = 0; testIndex < normalizedTest.Count; testIndex++)
+
+        Dictionary<int, int> kCorrects = new Dictionary<int, int>();
+        foreach (int k in ks)
         {
-            Console.Write($"\rMax Distance {testIndex + 1}/{normalizedTest.Count}");
-            float maxDistance = testTrainDistances[testIndex, 0];
-            for (int trainIndex = 1; trainIndex < normalizedTrain.Count; trainIndex++)
-            {
-                maxDistance = Math.Max(maxDistance, testTrainDistances[testIndex, trainIndex]);
-            }
-            testMaxDistances[testIndex] = maxDistance;
+            kCorrects.Add(k, 0);
         }
-        Console.WriteLine();
-        float[,] testTrainPreWeights = new float[normalizedTest.Count, normalizedTrain.Count];
-        for (int testIndex = 0; testIndex < normalizedTest.Count; testIndex++)
+        object lockObject = new object();
+        int done = 0;
+        Parallel.For(0, normalizedTest.Count, testIndex =>
         {
-            Console.Write($"\rPre Weight {testIndex + 1}/{normalizedTest.Count}");
+            Sample testSample = normalizedTest[testIndex];
+            List<(Sample trainSample, float distance)> trainSampleDistances = new List<(Sample, float)>(normalizedTrain.Count);
             for (int trainIndex = 0; trainIndex < normalizedTrain.Count; trainIndex++)
             {
-                float preWeight = 1f - (testTrainDistances[testIndex, trainIndex] / testMaxDistances[testIndex]);
-                testTrainPreWeights[testIndex, trainIndex] = preWeight;
+                float distance = Utility.EuclideanDistance(testSample.input, normalizedTrain[trainIndex].input);
+                trainSampleDistances.Add((normalizedTrain[trainIndex], distance));
             }
-        }
-        Console.WriteLine();
+            trainSampleDistances.Sort((a, b) => a.distance.CompareTo(b.distance));
 
-        TextWriter tw = new StreamWriter("results.csv");
-        tw.WriteLine("decay,correct,accuracy");
-        List<float> decays = new List<float>();
-        for (float decay = 1.0f; decay >= 0f; decay -= 0.001f)
-        {
-            decays.Add(decay);
-        }
-        object writeLock = new object();
-        Parallel.ForEach(decays, decay =>
-        //for (float decay = 0.1f; decay <= 100; decay += 0.1f)
-        {
-            int correct = 0;
-            for (int testIndex = 0; testIndex < normalizedTest.Count; testIndex++)
+            float[] output = new float[outputLength];
+            foreach (int k in ks)
             {
-                Sample testSample = normalizedTest[testIndex];
-                
-                List<(Sample trainSample, float distance, float preWeight)> trainSamples = new List<(Sample, float, float)>(normalizedTrain.Count);
-                for (int trainIndex = 0; trainIndex < normalizedTrain.Count; trainIndex++)
-                {
-                    float distance = testTrainDistances[testIndex, trainIndex];
-                    float preWeight = testTrainPreWeights[testIndex, trainIndex];
-                    trainSamples.Add((normalizedTrain[trainIndex], distance, preWeight));
-                }
-                trainSamples.Sort((a, b) => a.distance.CompareTo(b.distance));
-
+                Array.Clear(output);
                 float weightSum = 0f;
-                float[] output = new float[outputLength];
-                float multiplier = 1f;
-                for (int trainIndex = 0; trainIndex < trainSamples.Count; trainIndex++)
+                for (int trainIndex = 0; trainIndex < k; trainIndex++)
                 {
-                    float weight = trainSamples[trainIndex].preWeight * multiplier;
+                    Sample trainSample = trainSampleDistances[trainIndex].trainSample;
+                    float distance = trainSampleDistances[trainIndex].distance;
+                    float weight = 1f / (distance + 0.0000001f);
                     weightSum += weight;
                     for (int i = 0; i < outputLength; i++)
                     {
-                        output[i] += trainSamples[trainIndex].trainSample.output[i] * weight;
+                        output[i] += trainSample.output[i] * weight;
                     }
-                    multiplier *= decay;
                 }
                 for (int i = 0; i < outputLength; i++)
                 {
                     output[i] /= weightSum;
                 }
-                correct += Error.ArgmaxEquals(testSample, output) ? 1 : 0;
+                if (Error.ArgmaxEquals(testSample, output))
+                {
+                    lock (lockObject)
+                    {
+                        kCorrects[k]++;
+                    }
+                }
             }
-            float accuracy = (float)correct / (float)normalizedTest.Count;
-            lock (writeLock)
+            lock (lockObject)
             {
-                Console.WriteLine($"decay={decay} correct={correct} accuracy={accuracy}");
-                tw.WriteLine($"{decay},{correct},{accuracy}");
-                tw.Flush();
+                done++;
+                Console.WriteLine($"{done}/{normalizedTest.Count}");
             }
         });
+        foreach(int k in ks)
+        {
+            int correct = kCorrects[k];
+            float accuracy = (float)correct / (float)normalizedTest.Count;
+            tw.WriteLine($"{k},{correct},{accuracy}");
+        }
+        tw.Flush();
+
 
         Console.WriteLine("Press return to exit");
         Console.ReadLine();
