@@ -34,55 +34,91 @@ public class Program
 
     public static void Main()
     {
-        //List<Sample> mnistTrain = ReadMNIST("D:/data/mnist_train.csv", max: -1);
-        //List<Sample> mnistTest = ReadMNIST("D:/data/mnist_test.csv", max: -1);
-        //(List<Sample> normalizedTrain, List<Sample> normalizedTest) = Sample.Conormalize(mnistTrain, mnistTest);
+        List<Sample> mnistTrain = ReadMNIST("D:/data/mnist_train.csv", max: -1);
+        List<Sample> mnistTest = ReadMNIST("D:/data/mnist_test.csv", max: -1);
+        (List<Sample> normalizedTrain, List<Sample> normalizedTest) = Sample.Conormalize(mnistTrain, mnistTest);
 
-        try { Directory.Delete("./out", true); } catch (Exception _) { }
-        try { Directory.CreateDirectory("./out"); } catch (Exception _) {}
-
-        int width = 256;
-        int height = 256;
-        Test2D test2D = Test2D.CreateSpiral(1000, 30, 4, width, height);
-
-        for (float exponent = 1f; exponent <= 500f; exponent += 1f)
+        int outputLength = normalizedTrain[0].output.Length;
+        float[,] testTrainDistances = new float[normalizedTest.Count, normalizedTrain.Count];
+        for (int testIndex = 0; testIndex < normalizedTest.Count; testIndex++)
         {
-            Console.WriteLine($"exponent={exponent}");
-            List<(float[] input, float[] output)> testPredictions = new List<(float[], float[])>(width * height);
-            foreach (float[] input in test2D.testInputs)
+            Console.Write($"\rDistance {testIndex + 1}/{normalizedTest.Count}");
+            Parallel.For(0, normalizedTrain.Count, trainIndex =>
             {
-                List<(Sample sample, float distance)> sampleDistances = new List<(Sample sample, float distance)>();
-                foreach(Sample sample in test2D.normalizedSamples)
-                {
-                    float distance = Utility.EuclideanDistance(input, sample.input);
-                    sampleDistances.Add((sample, distance));
-                }
-                float maxDistance = sampleDistances.Max(sd => sd.distance);
-                maxDistance = Math.Max(maxDistance, 0.0001f);
-                List<float> weights = new List<float>();
-                foreach ((Sample sample, float distance) in sampleDistances)
-                {
-                    float weight = MathF.Pow(1f - (distance / maxDistance), exponent);
-                    weights.Add(weight);
-                }
-                float weightSum = weights.Sum();
-                int outputLength = sampleDistances[0].sample.output.Length;
+                float distance = Utility.EuclideanDistance(normalizedTest[testIndex].input, normalizedTrain[trainIndex].input);
+                testTrainDistances[testIndex, trainIndex] = distance;
+            });
+            /*for (int trainIndex = 0; trainIndex < normalizedTrain.Count; trainIndex++)
+            {
+                float distance = Utility.EuclideanDistance(normalizedTest[testIndex].input, normalizedTrain[trainIndex].input);
+                testTrainDistances[testIndex, trainIndex] = distance;
+            }*/
+        }
+        Console.WriteLine();
+        float[] testMaxDistances = new float[normalizedTest.Count];
+        for (int testIndex = 0; testIndex < normalizedTest.Count; testIndex++)
+        {
+            Console.Write($"\rMax Distance {testIndex + 1}/{normalizedTest.Count}");
+            float maxDistance = testTrainDistances[testIndex, 0];
+            for (int trainIndex = 1; trainIndex < normalizedTrain.Count; trainIndex++)
+            {
+                maxDistance = Math.Max(maxDistance, testTrainDistances[testIndex, trainIndex]);
+            }
+            testMaxDistances[testIndex] = maxDistance;
+        }
+        Console.WriteLine();
+        float[,] testTrainPreWeights = new float[normalizedTest.Count, normalizedTrain.Count];
+        for (int testIndex = 0; testIndex < normalizedTest.Count; testIndex++)
+        {
+            Console.Write($"\rPre Weight {testIndex + 1}/{normalizedTest.Count}");
+            for (int trainIndex = 0; trainIndex < normalizedTrain.Count; trainIndex++)
+            {
+                float preWeight = 1f - (testTrainDistances[testIndex, trainIndex] / testMaxDistances[testIndex]);
+                testTrainPreWeights[testIndex, trainIndex] = preWeight;
+            }
+        }
+        Console.WriteLine();
+
+        TextWriter tw = new StreamWriter("results.csv");
+        tw.WriteLine("exponent,correct,accuracy");
+        List<float> exponents = new List<float>();
+        for (float exponent = 0.01f; exponent <= 100f; exponent += 0.01f)
+        {
+            exponents.Add(exponent);
+        }
+        object writeLock = new object();
+        Parallel.ForEach(exponents, exponent =>
+        //for (float exponent = 0.1f; exponent <= 100; exponent += 0.1f)
+        {
+            int correct = 0;
+            for (int testIndex = 0; testIndex < normalizedTest.Count; testIndex++)
+            {
+                Sample testSample = normalizedTest[testIndex];
+                float weightSum = 0f;
                 float[] output = new float[outputLength];
-                for (int neighbour = 0; neighbour < sampleDistances.Count; neighbour++)
+                for (int trainIndex = 0; trainIndex < normalizedTrain.Count; trainIndex++)
                 {
+                    float weight = MathF.Pow(testTrainPreWeights[testIndex, trainIndex], exponent);
+                    weightSum += weight;
                     for (int i = 0; i < outputLength; i++)
                     {
-                        output[i] += sampleDistances[neighbour].sample.output[i] * weights[neighbour];
+                        output[i] += normalizedTrain[trainIndex].output[i] * weight;
                     }
                 }
                 for (int i = 0; i < outputLength; i++)
                 {
                     output[i] /= weightSum;
                 }
-                testPredictions.Add((input, output));
+                correct += Error.ArgmaxEquals(testSample, output) ? 1 : 0;
             }
-            test2D.Render($"./out/exp_{exponent}.bmp", testPredictions);
-        }
+            float accuracy = (float)correct / (float)normalizedTest.Count;
+            lock (writeLock)
+            {
+                Console.WriteLine($"exponent={exponent} correct={correct} accuracy={accuracy}");
+                tw.WriteLine($"{exponent},{correct},{accuracy}");
+                tw.Flush();
+            }
+        });
 
         Console.WriteLine("Press return to exit");
         Console.ReadLine();
