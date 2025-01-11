@@ -51,20 +51,17 @@
         }
     }
 
-    public void Render(float[,] testPredictions)
+    public void Render(List<(float[], float[])> testPredictions)
     {
         // draw predictions
-        int i = 0;
-        for (int x = 0; x < width; x++)
+        foreach((float[] input, float[] output) in testPredictions)
         {
-            for (int y = 0; y < height; y++)
-            {
-                byte r = (byte)(testPredictions[i, 0] * 255);
-                byte g = (byte)(testPredictions[i, 1] * 255);
-                byte b = (byte)(testPredictions[i, 2] * 255);
-                Bitmap.DrawPixel(pixels, x, y, r, g, b);
-                i++;
-            }
+            int x = (int)(input[0] * width);
+            int y = (int)(input[1] * height);
+            byte r = (byte)(output[0] * 255);
+            byte g = (byte)(output[1] * 255);
+            byte b = (byte)(output[2] * 255);
+            Bitmap.DrawPixel(pixels, x, y, r, g, b);
         }
 
         // draw sample backs
@@ -87,7 +84,7 @@
         }
     }
 
-    public void Render(string filename, float[,] testPredictions)
+    public void Render(string filename, List<(float[], float[])> testPredictions)
     {
         Render(testPredictions);
         Bitmap.SaveToBMP(filename, pixels);

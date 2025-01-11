@@ -38,28 +38,55 @@ public class Program
         //List<Sample> mnistTest = ReadMNIST("D:/data/mnist_test.csv", max: -1);
         //(List<Sample> normalizedTrain, List<Sample> normalizedTest) = Sample.Conormalize(mnistTrain, mnistTest);
 
-        try { Directory.Delete("./frames", true); } catch (Exception e) {}
-        try { Directory.CreateDirectory("./frames"); } catch (Exception e) { }
-        int width = 2048;
-        int height = 2048;
-        Test2D test2D = Test2D.CreateSpiral(1000, 30, 4, width, height);
-        float[,] normalizedDistances = Interpolator.ComputeNormalizedDistances(test2D.normalizedSamples, test2D.testInputs, verbose: true);
-        float[,] testPredictions = new float[test2D.testInputs.Count, test2D.normalizedSamples[0].output.Length];
+        try { Directory.Delete("./out", true); } catch (Exception _) { }
+        try { Directory.CreateDirectory("./out"); } catch (Exception _) {}
 
-        int i = 0;
-        float closeWeight = 1f;
-        float farWeight = 0.01f;
-        for (float hingePoint = 0.001f; hingePoint <= 1.0; hingePoint += 0.001f)
-        { 
-            Console.WriteLine($"exp {hingePoint}");
-            Parallel.For(0, test2D.testInputs.Count, testIndex =>
+        int width = 256;
+        int height = 256;
+        Test2D test2D = Test2D.CreateSpiral(1000, 30, 4, width, height);
+
+        for (float exponent = 1f; exponent <= 50f; exponent += 5f)
+        {
+            for (int k = 5; k <= 55; k += 10)
             {
-                Interpolator.ComputeHinge(test2D.normalizedSamples, normalizedDistances, testIndex, hingePoint: hingePoint, closeWeight: closeWeight, farWeight: farWeight, testPredictions);
-            });
-            test2D.Render($"./frames/{i.ToString().PadLeft(4, '0')}.bmp", testPredictions);
-            i++;
+                Console.WriteLine($"k={k}, exponent={exponent}");
+                List<(float[] input, float[] output)> testPredictions = new List<(float[], float[])>(width * height);
+                foreach (float[] input in test2D.testInputs)
+                {
+                    List<(Sample sample, float distance)> sampleDistances = new List<(Sample sample, float distance)>();
+                    foreach(Sample sample in test2D.normalizedSamples)
+                    {
+                        float distance = Utility.EuclideanDistance(input, sample.input);
+                        sampleDistances.Add((sample, distance));
+                    }
+                    sampleDistances = sampleDistances.OrderBy(sd => sd.distance).Take(k).ToList();
+                    float maxDistance = sampleDistances.Max(sd => sd.distance);
+                    maxDistance = Math.Max(maxDistance, 0.0001f);
+                    List<float> weights = new List<float>();
+                    foreach ((Sample sample, float distance) in sampleDistances)
+                    {
+                        float weight = MathF.Pow(1f - (distance / maxDistance), exponent);
+                        weights.Add(weight);
+                    }
+                    float weightSum = weights.Sum();
+                    int outputLength = sampleDistances[0].sample.output.Length;
+                    float[] output = new float[outputLength];
+                    for (int neighbour = 0; neighbour < sampleDistances.Count; neighbour++)
+                    {
+                        for (int i = 0; i < outputLength; i++)
+                        {
+                            output[i] += sampleDistances[neighbour].sample.output[i] * weights[neighbour];
+                        }
+                    }
+                    for (int i = 0; i < outputLength; i++)
+                    {
+                        output[i] /= weightSum;
+                    }
+                    testPredictions.Add((input, output));
+                }
+                test2D.Render($"./out/exp_{exponent}_k_{k}.bmp", testPredictions);
+            }
         }
-       
 
         Console.WriteLine("Press return to exit");
         Console.ReadLine();
