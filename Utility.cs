@@ -57,6 +57,18 @@
         return MathF.Sqrt(distance);
     }
 
+    public static float WeightedMeanAbsoluteDistance(float[] a, float[] b, float[] w)
+    {
+        float distance = 0f;
+        float weightSum = 0f;
+        for (int i = 0; i < a.Length; i++)
+        {
+            weightSum += w[i];
+            distance += Math.Abs(a[i] - b[i]) * w[i];
+        }
+        return distance / weightSum;
+    }
+
     public static float EuclideanDistance(float[] a, float[] b, List<int> features)
     {
         float distance = 0f;

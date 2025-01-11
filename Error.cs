@@ -32,6 +32,16 @@
         return error / (float)samples.Count;
     }
 
+    public static float MeanAbsoluteError(float[] a, float[] b)
+    {
+        float error = 0;
+        for (int j = 0; j < a.Length; j++)
+        {
+            error += MathF.Abs(a[j] - b[j]);
+        }
+        return error / (float)a.Length;
+    }
+
     public static bool ArgmaxEquals(Sample sample, float[] prediction)
     {
         float[] actual = sample.output;
