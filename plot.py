@@ -2,7 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 import matplotlib.cm as cm
-import numpy as np
+import matplotlib.ticker as mtick
 
 # Increase the maximum number of columns displayed (optional)
 pd.set_option('display.max_columns', None)
@@ -18,6 +18,9 @@ if not os.path.isfile(csv_file):
 print("Reading CSV file...")
 df = pd.read_csv(csv_file)
 
+# Ensure 'epoch' is sorted
+df = df.sort_values('epoch')
+
 # Create an output directory for the plots
 output_dir = 'plots'
 os.makedirs(output_dir, exist_ok=True)
@@ -26,8 +29,7 @@ os.makedirs(output_dir, exist_ok=True)
 print("Generating individual plots for key metrics...")
 
 # List of key metrics to plot individually
-key_metrics = ['fails', 'k', 'distanceSum', 'testCorrect', 
-               'inputWeightSum', 'distanceWeightSum', 'contributionWeightSum']
+key_metrics = ['fails', 'k', 'distanceSum', 'testCorrect', 'inputWeightSum']
 
 for metric in key_metrics:
     if metric not in df.columns:
@@ -35,11 +37,16 @@ for metric in key_metrics:
         continue
     
     plt.figure(figsize=(12, 6))
-    plt.plot(df['epoch'], df[metric], label=metric, color='blue')
+    plt.plot(df['epoch'], df[metric], color='blue')
     plt.xlabel('Epoch')
     plt.ylabel(metric)
     plt.title(f'{metric} vs Epoch')
-    plt.legend()
+    # Remove the legend
+    # plt.legend()
+    # Disable scientific notation for axes
+    ax = plt.gca()
+    ax.xaxis.set_major_formatter(mtick.StrMethodFormatter('{x:,.0f}'))
+    ax.yaxis.set_major_formatter(mtick.StrMethodFormatter('{x:,.6f}'))
     plt.grid(True)
     plt.tight_layout()
     
@@ -52,7 +59,7 @@ for metric in key_metrics:
 
 def plot_weight_category(df, weight_prefix, category_name, max_weights=None):
     """
-    Plots each weight in a category against epoch.
+    Plots each weight in a category against epoch, excluding sum columns.
 
     Parameters:
     - df: pandas DataFrame containing the data.
@@ -61,10 +68,11 @@ def plot_weight_category(df, weight_prefix, category_name, max_weights=None):
     - max_weights: Optional integer to limit the number of weights plotted.
     """
     print(f"Generating plot for {category_name} weights...")
+    # Select columns that start with the weight_prefix and do NOT end with 'Sum'
     weight_columns = [col for col in df.columns if col.startswith(weight_prefix) and not col.endswith('Sum')]
     
     if not weight_columns:
-        print(f"Warning: No columns found with prefix '{weight_prefix}'. Skipping this category.")
+        print(f"Warning: No columns found with prefix '{weight_prefix}' excluding sum columns. Skipping this category.")
         return
     
     if max_weights:
@@ -72,6 +80,9 @@ def plot_weight_category(df, weight_prefix, category_name, max_weights=None):
         print(f"Plotting first {max_weights} weights out of {len(weight_columns)}.")
     
     num_weights = len(weight_columns)
+    
+    # Choose a colormap that can handle a large number of distinct colors
+    # 'hsv' is suitable for this purpose
     cmap = cm.get_cmap('hsv', num_weights)
     
     plt.figure(figsize=(15, 10))
@@ -83,6 +94,15 @@ def plot_weight_category(df, weight_prefix, category_name, max_weights=None):
     plt.ylabel('Weight Value')
     plt.title(f'{category_name.capitalize()} Weights vs Epoch')
     plt.grid(True)
+    
+    # Remove the legend
+    # plt.legend()
+    
+    # Disable scientific notation for axes
+    ax = plt.gca()
+    ax.xaxis.set_major_formatter(mtick.StrMethodFormatter('{x:,.0f}'))
+    ax.yaxis.set_major_formatter(mtick.StrMethodFormatter('{x:,.6f}'))
+    
     plt.tight_layout()
     
     plot_path = os.path.join(output_dir, f'{weight_prefix}_vs_epoch.png')
@@ -95,11 +115,5 @@ MAX_WEIGHTS_TO_PLOT = None  # Set to an integer like 100 if needed
 
 # 2.1 Plot: epoch vs each of the input weights
 plot_weight_category(df, 'inputWeight', 'input', max_weights=MAX_WEIGHTS_TO_PLOT)
-
-# 2.2 Plot: epoch vs each of the distance weights
-plot_weight_category(df, 'distanceWeight', 'distance', max_weights=MAX_WEIGHTS_TO_PLOT)
-
-# 2.3 Plot: epoch vs each of the contribution weights
-plot_weight_category(df, 'contributionWeight', 'contribution', max_weights=MAX_WEIGHTS_TO_PLOT)
 
 print("All plots have been generated and saved successfully.")
