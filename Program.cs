@@ -33,9 +33,10 @@ public class Program
         return samples;
     }
 
-    public static float GetError(List<Sample> normalizedTrain, List<Sample> normalizedTest, int k, float[] trainSampleDistanceWeights, float[] inputWeights, int outputLength)
+    public static (float error, int correct) GetError(List<Sample> normalizedTrain, List<Sample> normalizedTest, int k, float[] trainSampleDistanceWeights, float[] inputWeights, int outputLength)
     {
         float errorSum = 0;
+        int correct = 0;
         object errorLock = new object();
         Parallel.For(0, normalizedTest.Count, testIndex =>
         {
@@ -71,9 +72,13 @@ public class Program
             {
                 errorSum += error;
             }
+            if (Error.ArgmaxEquals(testSample, output))
+            {
+                Interlocked.Increment(ref correct);
+            }
         });
         errorSum /= normalizedTest.Count;
-        return errorSum;
+        return (errorSum, correct);
     }
 
     public static void Main()
@@ -83,7 +88,7 @@ public class Program
         (List<Sample> normalizedTrain, List<Sample> normalizedTest) = Sample.Conormalize(mnistTrain, mnistTest);
 
         TextWriter tw = new StreamWriter("./results.csv");
-        tw.WriteLine("epoch,inputWeightSum,trainSampleDistanceWeightSum,error");
+        tw.WriteLine("epoch,trainSampleDistanceWeightSum,inputWeightSum,error,correct");
 
         int inputLength = normalizedTrain[0].input.Length;
         int outputLength = normalizedTrain[0].output.Length;
@@ -102,8 +107,8 @@ public class Program
         }
         float inputWeightSum = inputWeights.Sum();
         int epoch = 0;
-        float bestError = GetError(normalizedTrain, normalizedTest, k, trainSampleDistanceWeights, inputWeights, outputLength);
-        tw.WriteLine(epoch + "," + trainSampleDistanceWeightSum + "," + inputWeightSum + "," + bestError);
+        (float bestError, int bestCorrect) = GetError(normalizedTrain, normalizedTest, k, trainSampleDistanceWeights, inputWeights, outputLength);
+        tw.WriteLine($"{epoch},{trainSampleDistanceWeightSum},{inputWeightSum},{bestError},{bestCorrect}");
         tw.Flush();
 
         // try to reduce input weights
@@ -139,16 +144,16 @@ public class Program
                     inputWeightSum = inputWeights.Sum();
 
                     // score it
-                    float error = GetError(normalizedTrain, normalizedTest, k, trainSampleDistanceWeights, inputWeights, outputLength);
+                    (float error, int correct) = GetError(normalizedTrain, normalizedTest, k, trainSampleDistanceWeights, inputWeights, outputLength);
 
                     // record it
-                    tw.WriteLine(epoch + "," + trainSampleDistanceWeightSum + "," + inputWeightSum + "," + error);
+                    tw.WriteLine($"{epoch},{trainSampleDistanceWeightSum},{inputWeightSum},{error},{correct}");
                     tw.Flush();
 
                     // if this is worse
                     if (error > bestError)
                     {
-                        Console.WriteLine("Worse: " + error + " TrainWeightSum: " + trainSampleDistanceWeightSum + " InputWeightSum: " + inputWeightSum);
+                        Console.WriteLine($"Worse Error: {error} Correct: {correct} TrainWeightSum: {trainSampleDistanceWeightSum} InputWeightSum: {inputWeightSum}");
 
                         // increment back into place
                         inputWeights[inputIndex] += nudge;
@@ -159,10 +164,11 @@ public class Program
                     // otherwise it was the same or better
                     else
                     {
-                        Console.WriteLine("Same or Better: " + error + " TrainWeightSum: " + trainSampleDistanceWeightSum + " InputWeightSum: " + inputWeightSum);
+                        Console.WriteLine($"Better Error: {error} Correct: {correct} TrainWeightSum: {trainSampleDistanceWeightSum} InputWeightSum: {inputWeightSum}");
 
                         // update score
                         bestError = error;
+                        bestCorrect = correct;
 
                         // mark that we improved
                         improved = true;
@@ -206,16 +212,16 @@ public class Program
                     trainSampleDistanceWeightSum = trainSampleDistanceWeights.Sum();
 
                     // score it
-                    float error = GetError(normalizedTrain, normalizedTest, k, trainSampleDistanceWeights, inputWeights, outputLength);
+                    (float error, int correct) = GetError(normalizedTrain, normalizedTest, k, trainSampleDistanceWeights, inputWeights, outputLength);
 
                     // record it
-                    tw.WriteLine(epoch + "," + trainSampleDistanceWeightSum + "," + inputWeightSum + "," + error);
+                    tw.WriteLine($"{epoch},{trainSampleDistanceWeightSum},{inputWeightSum},{error},{correct}");
                     tw.Flush();
 
                     // if this is worse
                     if (error > bestError)
                     {
-                        Console.WriteLine("Worse: " + error + " TrainWeightSum: " + trainSampleDistanceWeightSum + " InputWeightSum: " + inputWeightSum);
+                        Console.WriteLine($"Worse Error: {error} Correct: {correct} TrainWeightSum: {trainSampleDistanceWeightSum} InputWeightSum: {inputWeightSum}");
 
                         // decrement back into place
                         inputWeights[trainIndex] -= nudge;
@@ -226,10 +232,11 @@ public class Program
                     // otherwise it was the same or better
                     else
                     {
-                        Console.WriteLine("Same or Better: " + error + " TrainWeightSum: " + trainSampleDistanceWeightSum + " InputWeightSum: " + inputWeightSum);
+                        Console.WriteLine($"Better Error: {error} Correct: {correct} TrainWeightSum: {trainSampleDistanceWeightSum} InputWeightSum: {inputWeightSum}");
 
                         // update score
                         bestError = error;
+                        bestCorrect = correct;
 
                         // mark that we improved
                         improved = true;
@@ -243,13 +250,19 @@ public class Program
 
         trainSampleDistanceWeightSum = trainSampleDistanceWeights.Sum();
         inputWeightSum = inputWeights.Sum();
-        Console.WriteLine("Best: " + bestError + " TrainWeightSum: " + trainSampleDistanceWeightSum + " InputWeightSum: " + inputWeightSum);
-        Console.WriteLine("Weights:");
+        Console.WriteLine($"Final Error: {bestError} Correct: {bestCorrect} TrainWeightSum: {trainSampleDistanceWeightSum} InputWeightSum: {inputWeightSum}");
+
+        TextWriter weightsWriter = new StreamWriter("./weights.csv");
+        weightsWriter.WriteLine("inputIndex,weight");
         for (int i = 0; i < inputWeights.Length; i++)
         {
-            Console.WriteLine("Input " + i + ": " + inputWeights[i]);
+            weightsWriter.WriteLine($"{i},{inputWeights[i]}");
         }
-
+        weightsWriter.WriteLine("trainIndex,weight");
+        for (int i = 0; i < trainSampleDistanceWeights.Length; i++)
+        {
+            weightsWriter.WriteLine($"{i},{trainSampleDistanceWeights[i]}");
+        }
 
         Console.WriteLine("Press return to exit");
         Console.ReadLine();
