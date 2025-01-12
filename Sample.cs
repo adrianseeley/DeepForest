@@ -9,17 +9,6 @@
         this.output = output;
     }
 
-    public static (List<Sample> normalizedSamplesA, List<Sample> normalizedSamplesB) Conormalize(List<Sample> samplesA, List<Sample> samplesB)
-    {
-        List<Sample> jointSamples = new List<Sample>();
-        jointSamples.AddRange(samplesA);
-        jointSamples.AddRange(samplesB);
-        List<Sample> normalizedJointSamples = Normalize(jointSamples);
-        List<Sample> normalizedSamplesA = normalizedJointSamples.GetRange(0, samplesA.Count);
-        List<Sample> normalizedSamplesB = normalizedJointSamples.GetRange(samplesA.Count, samplesB.Count);
-        return (normalizedSamplesA, normalizedSamplesB);
-    }
-
     public static List<Sample> Normalize(List<Sample> samples)
     {
         float[] inputMins = new float[samples[0].input.Length];
@@ -104,55 +93,14 @@
         return normalized;
     }
 
-    public static List<Sample> ReselectFeatures(List<Sample> samples, List<int> features)
+    public static (List<Sample> normalizedSamplesA, List<Sample> normalizedSamplesB) Conormalize(List<Sample> samplesA, List<Sample> samplesB)
     {
-        List<Sample> reselected = new List<Sample>();
-        foreach (Sample sample in samples)
-        {
-            float[] input = new float[features.Count];
-            for (int i = 0; i < features.Count; i++)
-            {
-                input[i] = sample.input[features[i]];
-            }
-            reselected.Add(new Sample(input, sample.output));
-        }
-        return reselected;
-    }
-
-    public static float[] ReselectFeatures(float[] input, List<int> features)
-    {
-        float[] reselected = new float[features.Count];
-        for (int i = 0; i < features.Count; i++)
-        {
-            reselected[i] = input[features[i]];
-        }
-        return reselected;
-    }
-
-    public static float[] AverageOutput(List<Sample> samples)
-    {
-        float[] averageOutput = new float[samples[0].output.Length];
-        foreach (Sample sample in samples)
-        {
-            for (int i = 0; i < sample.output.Length; i++)
-            {
-                averageOutput[i] += sample.output[i];
-            }
-        }
-        for (int i = 0; i < averageOutput.Length; i++)
-        {
-            averageOutput[i] /= samples.Count;
-        }
-        return averageOutput;
-    }
-
-    public static HashSet<float> HistogramInputComponent(List<Sample> samples, int inputIndex)
-    {
-        HashSet<float> histogram = new HashSet<float>();
-        foreach (Sample sample in samples)
-        {
-            histogram.Add(sample.input[inputIndex]);
-        }
-        return histogram;
+        List<Sample> jointSamples = new List<Sample>();
+        jointSamples.AddRange(samplesA);
+        jointSamples.AddRange(samplesB);
+        List<Sample> normalizedJointSamples = Normalize(jointSamples);
+        List<Sample> normalizedSamplesA = normalizedJointSamples.GetRange(0, samplesA.Count);
+        List<Sample> normalizedSamplesB = normalizedJointSamples.GetRange(samplesA.Count, samplesB.Count);
+        return (normalizedSamplesA, normalizedSamplesB);
     }
 }
