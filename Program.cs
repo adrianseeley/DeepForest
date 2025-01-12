@@ -491,6 +491,9 @@
                 // if we are keeping the mutation
                 if (keepMutation)
                 {
+                    // increment epoch
+                    epoch++;
+
                     // score and mark it
                     improved = true;
                     bestEvaluation = evaluation;
@@ -498,9 +501,6 @@
 
                     // log it
                     Log(csv, epoch, fails, bestEvaluation.k, bestEvaluation.distanceSum, bestScore, inputWeights, distanceWeights, contributionWeights);
-
-                    // increment epoch
-                    epoch++;
                     continue;
                 }
 
