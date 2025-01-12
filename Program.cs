@@ -35,9 +35,8 @@ public class Program
 
     public static (float error, int correct) GetError(List<Sample> normalizedTrain, List<Sample> normalizedTest, int k, float[] trainSampleDistanceWeights, float[] inputWeights, int outputLength)
     {
-        float errorSum = 0;
         int correct = 0;
-        object errorLock = new object();
+        float[] errors = new float[normalizedTest.Count];
         Parallel.For(0, normalizedTest.Count, testIndex =>
         {
             Sample testSample = normalizedTest[testIndex];
@@ -68,17 +67,14 @@ public class Program
                 output[i] /= weightSum;
             }
             float error = Error.MeanAbsoluteError(testSample.output, output);
-            lock(errorLock)
-            {
-                errorSum += error;
-            }
+            errors[testIndex] = error;
             if (Error.ArgmaxEquals(testSample, output))
             {
                 Interlocked.Increment(ref correct);
             }
         });
-        errorSum /= normalizedTest.Count;
-        return (errorSum, correct);
+        float averageError = (float)errors.Sum() / (float)normalizedTest.Count;
+        return (averageError, correct);
     }
 
     public static void Main()
@@ -93,7 +89,7 @@ public class Program
         int inputLength = normalizedTrain[0].input.Length;
         int outputLength = normalizedTrain[0].output.Length;
         int k = 3;
-        float nudge = 0.01f;
+        float nudge = 0.1f;
         float[] trainSampleDistanceWeights = new float[normalizedTrain.Count];
         for (int i = 0; i < normalizedTrain.Count; i++)
         {
