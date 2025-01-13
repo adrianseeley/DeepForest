@@ -39,6 +39,23 @@
         return inputWeights;
     }
 
+    public static float Distance(float[] a, float[] b, float[] w)
+    {
+        float distance = 0f;
+        for (int i = 0; i < a.Length; i++)
+        {
+            distance += MathF.Pow(a[i] - b[i], 2) * w[i];
+        }
+        return distance;
+    }
+
+    public static float ReweightDistance(float distance, float a, float b, float oldW, float newW)
+    {
+        distance -= MathF.Pow(a - b, 2) * oldW;
+        distance += MathF.Pow(a - b, 2) * newW;
+        return distance;
+    }
+
     public static float[,] CreateTrainTrainDistanceMatrix(List<Sample> trainSamples, float[] inputWeights)
     {
         float[,] distanceMatrix = new float[trainSamples.Count, trainSamples.Count];
@@ -50,11 +67,7 @@
             for (int b = a + 1; b < trainSamples.Count; b++)
             {
                 float[] inputB = trainSamples[b].input;
-                float distance = 0f;
-                for (int i = 0; i < inputA.Length; i++)
-                {
-                    distance += MathF.Abs(inputA[i] - inputB[i]) * inputWeights[i];
-                }
+                float distance = Distance(inputA, inputB, inputWeights);   
                 distanceMatrix[a, b] = distance;
                 distanceMatrix[b, a] = distance;
             }
@@ -77,11 +90,7 @@
             for (int testIndex = 0; testIndex < testSamples.Count; testIndex++)
             {
                 float[] inputTest = testSamples[testIndex].input;
-                float distance = 0f;
-                for (int i = 0; i < inputTrain.Length; i++)
-                {
-                    distance += MathF.Abs(inputTrain[i] - inputTest[i]) * inputWeights[i];
-                }
+                float distance = Distance(inputTrain, inputTest, inputWeights);
                 distanceMatrix[trainIndex, testIndex] = distance;
             }
             int localComplete = Interlocked.Increment(ref complete);
@@ -101,9 +110,7 @@
             for (int b = a + 1; b < trainSamples.Count; b++)
             {
                 float[] inputB = trainSamples[b].input;
-                float distance = trainTrainDistanceMatrix[a, b];
-                distance -= MathF.Abs(inputA[inputWeightIndex] - inputB[inputWeightIndex]) * oldInputWeightValue;
-                distance += MathF.Abs(inputA[inputWeightIndex] - inputB[inputWeightIndex]) * newInputWeightValue;
+                float distance = ReweightDistance(trainTrainDistanceMatrix[a, b], inputA[inputWeightIndex], inputB[inputWeightIndex], oldInputWeightValue, newInputWeightValue);
                 trainTrainDistanceMatrix[a, b] = distance;
                 trainTrainDistanceMatrix[b, a] = distance;
             }
@@ -119,9 +126,7 @@
             for (int testIndex = 0; testIndex < testSamples.Count; testIndex++)
             {
                 float[] inputTest = testSamples[testIndex].input;
-                float distance = trainTestDistanceMatrix[trainIndex, testIndex];
-                distance -= MathF.Abs(inputTrain[inputWeightIndex] - inputTest[inputWeightIndex]) * oldInputWeightValue;
-                distance += MathF.Abs(inputTrain[inputWeightIndex] - inputTest[inputWeightIndex]) * newInputWeightValue;
+                float distance = ReweightDistance(trainTestDistanceMatrix[trainIndex, testIndex], inputTrain[inputWeightIndex], inputTest[inputWeightIndex], oldInputWeightValue, newInputWeightValue);
                 trainTestDistanceMatrix[trainIndex, testIndex] = distance;
             }
         });
