@@ -39,7 +39,7 @@
         return inputWeights;
     }
 
-    public static float[,] CreateDistanceMatrix(List<Sample> trainSamples, float[] inputWeights)
+    public static float[,] CreateTrainTrainDistanceMatrix(List<Sample> trainSamples, float[] inputWeights)
     {
         float[,] distanceMatrix = new float[trainSamples.Count, trainSamples.Count];
         int complete = 0;
@@ -61,50 +61,92 @@
             int localComplete = Interlocked.Increment(ref complete);
             if (localComplete % 1000 == 0)
             {
-                Console.WriteLine($"Matrix: {localComplete} / {trainSamples.Count}");
+                Console.WriteLine($"TrainTrainMatrix: {localComplete} / {trainSamples.Count}");
             }
         });
         return distanceMatrix;
     }
 
-    public static void ModifyInputWeight(List<Sample> trainSamples, float[] inputWeights, float[,] distanceMatrix, int inputWeightIndex, float newInputWeightValue)
+    public static float[,] CreateTrainTestDistanceMatrix(List<Sample> trainSamples, List<Sample> testSamples, float[] inputWeights)
     {
-        float oldInputWeightValue = inputWeights[inputWeightIndex];
+        float[,] distanceMatrix = new float[trainSamples.Count, testSamples.Count];
+        int complete = 0;
+        Parallel.For(0, trainSamples.Count, trainIndex =>
+        {
+            float[] inputTrain = trainSamples[trainIndex].input;
+            for (int testIndex = 0; testIndex < testSamples.Count; testIndex++)
+            {
+                float[] inputTest = testSamples[testIndex].input;
+                float distance = 0f;
+                for (int i = 0; i < inputTrain.Length; i++)
+                {
+                    distance += MathF.Abs(inputTrain[i] - inputTest[i]) * inputWeights[i];
+                }
+                distanceMatrix[trainIndex, testIndex] = distance;
+            }
+            int localComplete = Interlocked.Increment(ref complete);
+            if (localComplete % 1000 == 0)
+            {
+                Console.WriteLine($"TrainTestMatrix: {localComplete} / {trainSamples.Count}");
+            }
+        });
+        return distanceMatrix;
+    }
+
+    public static void ModifyTrainTrainInputWeight(List<Sample> trainSamples, float[] inputWeights, float[,] trainTrainDistanceMatrix, int inputWeightIndex, float oldInputWeightValue, float newInputWeightValue)
+    {
         Parallel.For(0, trainSamples.Count, a =>
         {
             float[] inputA = trainSamples[a].input;
             for (int b = a + 1; b < trainSamples.Count; b++)
             {
                 float[] inputB = trainSamples[b].input;
-                float distance = distanceMatrix[a, b];
+                float distance = trainTrainDistanceMatrix[a, b];
                 distance -= MathF.Abs(inputA[inputWeightIndex] - inputB[inputWeightIndex]) * oldInputWeightValue;
                 distance += MathF.Abs(inputA[inputWeightIndex] - inputB[inputWeightIndex]) * newInputWeightValue;
-                distanceMatrix[a, b] = distance;
-                distanceMatrix[b, a] = distance;
+                trainTrainDistanceMatrix[a, b] = distance;
+                trainTrainDistanceMatrix[b, a] = distance;
             }
         });
         inputWeights[inputWeightIndex] = newInputWeightValue;
     }
 
-    public static List<(Sample trainSample, float distance)> FindNeighbours(int k, int trainIndex, List<Sample> trainSamples, float[,] distanceMatrix)
+    public static void ModifyTrainTestInputWeight(List<Sample> trainSamples, List<Sample> testSamples, float[] inputWeights, float[,] trainTestDistanceMatrix, int inputWeightIndex, float oldInputWeightValue, float newInputWeightValue)
+    {
+        Parallel.For(0, trainSamples.Count, trainIndex =>
+        {
+            float[] inputTrain = trainSamples[trainIndex].input;
+            for (int testIndex = 0; testIndex < testSamples.Count; testIndex++)
+            {
+                float[] inputTest = testSamples[testIndex].input;
+                float distance = trainTestDistanceMatrix[trainIndex, testIndex];
+                distance -= MathF.Abs(inputTrain[inputWeightIndex] - inputTest[inputWeightIndex]) * oldInputWeightValue;
+                distance += MathF.Abs(inputTrain[inputWeightIndex] - inputTest[inputWeightIndex]) * newInputWeightValue;
+                trainTestDistanceMatrix[trainIndex, testIndex] = distance;
+            }
+        });
+        inputWeights[inputWeightIndex] = newInputWeightValue;
+    }
+
+    public static List<(Sample trainSample, float distance)> FindNeighboursTrain(int k, int trainIndex, List<Sample> trainSamples, float[,] trainTrainDistanceMatrix)
     {
         List<(Sample trainSample, float distance)> neighbours = new List<(Sample, float)>(k);
-        for (int i = 0; i < trainSamples.Count; i++)
+        for (int neighbourTrainIndex = 0; neighbourTrainIndex < trainSamples.Count; neighbourTrainIndex++)
         {
-            if (i == trainIndex)
+            if (neighbourTrainIndex == trainIndex)
             {
-                continue;
+                continue; // cant test against self
             }
-            float distance = distanceMatrix[i, trainIndex];
+            float distance = trainTrainDistanceMatrix[neighbourTrainIndex, trainIndex];
             if (neighbours.Count < k)
             {
-                neighbours.Add((trainSamples[i], distance));
+                neighbours.Add((trainSamples[neighbourTrainIndex], distance));
                 neighbours.Sort((a, b) => a.distance.CompareTo(b.distance));
                 continue;
             }
             if (distance < neighbours.Last().distance)
             {
-                neighbours.Add((trainSamples[i], distance));
+                neighbours.Add((trainSamples[neighbourTrainIndex], distance));
                 neighbours.Sort((a, b) => a.distance.CompareTo(b.distance));
                 neighbours.RemoveAt(neighbours.Count - 1);
                 continue;
@@ -113,26 +155,21 @@
         return neighbours;
     }
 
-    public static List<(Sample trainSample, float distance)> FindNeighboursTest(int k, List<Sample> trainSamples, Sample testSample, float[] inputWeights)
+    public static List<(Sample trainSample, float distance)> FindNeighboursTest(int k, int testIndex, List<Sample> trainSamples, float[,] trainTestDistanceMatrix)
     {
         List<(Sample trainSample, float distance)> neighbours = new List<(Sample, float)>(k);
-        for (int i = 0; i < trainSamples.Count; i++)
+        for (int trainIndex = 0; trainIndex < trainSamples.Count; trainIndex++)
         {
-            Sample trainSample = trainSamples[i];
-            float distance = 0f;
-            for (int j = 0; j < trainSample.input.Length; j++)
-            {
-                distance += MathF.Abs(trainSample.input[j] - testSample.input[j]) * inputWeights[j];
-            }
+            float distance = trainTestDistanceMatrix[trainIndex, testIndex];
             if (neighbours.Count < k)
             {
-                neighbours.Add((trainSample, distance));
+                neighbours.Add((trainSamples[trainIndex], distance));
                 neighbours.Sort((a, b) => a.distance.CompareTo(b.distance));
                 continue;
             }
             if (distance < neighbours.Last().distance)
             {
-                neighbours.Add((trainSample, distance));
+                neighbours.Add((trainSamples[trainIndex], distance));
                 neighbours.Sort((a, b) => a.distance.CompareTo(b.distance));
                 neighbours.RemoveAt(neighbours.Count - 1);
                 continue;
@@ -164,36 +201,14 @@
         return prediction;
     }
 
-    public static float[] PredictTest(int k, List<(Sample trainSample, float distance)> neighbours)
-    {
-        int predictionSize = neighbours[0].trainSample.output.Length;
-        float weightSum = 0f;
-        float[] prediction = new float[predictionSize];
-        for (int neighbourIndex = 0; neighbourIndex < neighbours.Count; neighbourIndex++)
-        {
-            Sample neighbour = neighbours[neighbourIndex].trainSample;
-            float distance = neighbours[neighbourIndex].distance;
-            float weight = 1f / (distance + 0.0000001f);
-            weightSum += weight;
-            for (int j = 0; j < predictionSize; j++)
-            {
-                prediction[j] += neighbour.output[j] * weight;
-            }
-        }
-        for (int j = 0; j < predictionSize; j++)
-        {
-            prediction[j] /= weightSum;
-        }
-        return prediction;
-    }
-
-    public static float Evaluate(int k, List<Sample> trainSamples, float[,] distanceMatrix)
+    public static (float distanceSum, int correct) EvaluateTrain(int k, List<Sample> trainSamples, List<int> trainSamplesArgmax, float[,] trainTrainDistanceMatrix)
     {
         float[] localDistanceSums = new float[trainSamples.Count];
+        int correct = 0;
         Parallel.For(0, trainSamples.Count, trainIndex =>
         {
             float[] output = trainSamples[trainIndex].output;
-            List<(Sample trainSample, float distance)> neighbours = FindNeighbours(k, trainIndex, trainSamples, distanceMatrix);
+            List<(Sample trainSample, float distance)> neighbours = FindNeighboursTrain(k, trainIndex, trainSamples, trainTrainDistanceMatrix);
             float[] prediction = Predict(k, neighbours);
             float localDistanceSum = 0f;
             for (int j = 0; j < prediction.Length; j++)
@@ -201,13 +216,45 @@
                 localDistanceSum += MathF.Abs(prediction[j] - output[j]);
             }
             localDistanceSums[trainIndex] = localDistanceSum;
+            if (Argmax(prediction) == trainSamplesArgmax[trainIndex])
+            {
+                Interlocked.Increment(ref correct);
+            }
         });
         float distanceSum = 0f;
         for (int i = 0; i < trainSamples.Count; i++)
         {
             distanceSum += localDistanceSums[i];
         }
-        return distanceSum;
+        return (distanceSum, correct);
+    }
+
+    public static (float distanceSum, int correct) EvaluateTest(int k, List<Sample> trainSamples, List<Sample> testSamples, List<int> testSamplesArgmax, float[,] trainTestDistanceMatrix)
+    {
+        float[] localDistanceSums = new float[testSamples.Count];
+        int correct = 0;
+        Parallel.For(0, testSamples.Count, testIndex =>
+        {
+            float[] output = testSamples[testIndex].output;
+            List<(Sample trainSample, float distance)> neighbours = FindNeighboursTest(k, testIndex, trainSamples, trainTestDistanceMatrix);
+            float[] prediction = Predict(k, neighbours);
+            float localDistanceSum = 0f;
+            for (int j = 0; j < prediction.Length; j++)
+            {
+                localDistanceSum += MathF.Abs(prediction[j] - output[j]);
+            }
+            localDistanceSums[testIndex] = localDistanceSum;
+            if (Argmax(prediction) == testSamplesArgmax[testIndex])
+            {
+                Interlocked.Increment(ref correct);
+            }
+        });
+        float distanceSum = 0f;
+        for (int i = 0; i < testSamples.Count; i++)
+        {
+            distanceSum += localDistanceSums[i];
+        }
+        return (distanceSum, correct);
     }
 
     public static int Argmax(float[] vector)
@@ -225,27 +272,12 @@
         return index;
     }
 
-    public static int ScoreTest(int k, List<Sample> trainSamples, List<Sample> testSamples, float[] inputWeights)
-    {
-        int correct = 0;
-        Parallel.ForEach(testSamples, testSample =>
-        {
-            List<(Sample trainSample, float distance)> neighbours = FindNeighboursTest(k, trainSamples, testSample, inputWeights);
-            float[] prediction = PredictTest(k, neighbours);
-            if (Argmax(prediction) == Argmax(testSample.output))
-            {
-                Interlocked.Increment(ref correct);
-            }
-        });
-        return correct;
-    }
-
-    public static void Log(TextWriter csv, int epoch, int fails, float distanceSum, int testCorrect, float[] inputWeights)
+    public static void Log(TextWriter csv, int epoch, int fails, float trainDistanceSum, int trainCorrect, float testDistanceSum, int testCorrect, float[] inputWeights)
     {
         float inputWeightSum = inputWeights.Sum();
-        csv.WriteLine($"{epoch},{fails},{distanceSum},{testCorrect},{inputWeightSum}");
+        csv.WriteLine($"{epoch},{fails},{trainDistanceSum},{trainCorrect},{testDistanceSum},{testCorrect},{inputWeightSum}");
         csv.Flush();
-        Console.WriteLine($"epoch: {epoch}, fails: {fails}, distanceSum: {distanceSum}, testCorrect: {testCorrect}, inputWeightSum: {inputWeightSum}");
+        Console.WriteLine($"epoch: {epoch}, fails: {fails}, trainDistanceSum: {trainDistanceSum}, trainCorrect: {trainCorrect}, testDistanceSum: {testDistanceSum}, testCorrect: {testCorrect}, inputWeightSum: {inputWeightSum}");
     }
 
     public static void Main()
@@ -260,20 +292,32 @@
         List<Sample> mnistTest = ReadMNIST("D:/data/mnist_test.csv", max: 1000);
         (List<Sample> trainSamples, List<Sample> testSamples) = Sample.Conormalize(mnistTrain, mnistTest);
 
+        List<int> trainSamplesArgmax = new List<int>(trainSamples.Count);
+        foreach (Sample sample in trainSamples)
+        {
+            trainSamplesArgmax.Add(Argmax(sample.output));
+        }
+        List<int> testSamplesArgmax = new List<int>(testSamples.Count);
+        foreach (Sample sample in testSamples)
+        {
+            testSamplesArgmax.Add(Argmax(sample.output));
+        }
+
         float[] inputWeights = CreateInputWeights(trainSamples);
-        float[,] distanceMatrix = CreateDistanceMatrix(trainSamples, inputWeights);
+        float[,] trainTrainDistanceMatrix = CreateTrainTrainDistanceMatrix(trainSamples, inputWeights);
+        float[,] trainTestDistanceMatrix = CreateTrainTestDistanceMatrix(trainSamples, testSamples, inputWeights);
         List<int> mutationIndices = Enumerable.Range(0, inputWeights.Length).ToList();
 
         TextWriter csv = new StreamWriter("results.csv", append: false);
-        csv.WriteLine("epoch,fails,distanceSum,testCorrect,inputWeightSum");
+        csv.WriteLine("epoch,fails,trainDistanceSum,trainCorrect,testDistanceSum,testCorrect,inputWeightSum");
         csv.Flush();
 
         // calculate starting point
-        float bestDistanceSum = Evaluate(k, trainSamples, distanceMatrix);
-        int bestScore = ScoreTest(k, trainSamples, testSamples, inputWeights);
+        (float trainDistanceSum, int trainCorrect) = EvaluateTrain(k, trainSamples, trainSamplesArgmax, trainTrainDistanceMatrix);
+        (float testDistanceSum, int testCorrect) = EvaluateTest(k, trainSamples, testSamples, testSamplesArgmax, trainTestDistanceMatrix);
 
         // log starting point
-        Log(csv, epoch, fails, bestDistanceSum, bestScore, inputWeights);
+        Log(csv, epoch, fails, trainDistanceSum, trainCorrect, testDistanceSum, testCorrect, inputWeights);
 
         // loop until improvements stop
         bool improved = true;
@@ -308,29 +352,34 @@
                 }
 
                 // modify the inputWeight
-                ModifyInputWeight(trainSamples, inputWeights, distanceMatrix, mutationIndex, newWeight);
+                ModifyTrainTrainInputWeight(trainSamples, inputWeights, trainTrainDistanceMatrix, mutationIndex, oldWeight, newWeight);
+                ModifyTrainTestInputWeight(trainSamples, testSamples, inputWeights, trainTestDistanceMatrix, mutationIndex, oldWeight, newWeight);
 
-                // evaluate the new weights
-                float distanceSum = Evaluate(k, trainSamples, distanceMatrix);
+                // evaluate the mutation on train
+                (float mutationTrainDistanceSum, int mutationTrainCorrect) = EvaluateTrain(k, trainSamples, trainSamplesArgmax, trainTrainDistanceMatrix);
 
                 // if we are keeping the mutationIndex
-                if (distanceSum <= bestDistanceSum)
+                if (mutationTrainDistanceSum <= trainDistanceSum)
                 {
                     // increment epoch
                     epoch++;
 
                     // score and mark it
                     improved = true;
-                    bestDistanceSum = distanceSum;
-                    bestScore = ScoreTest(k, trainSamples, testSamples, inputWeights);
+                    trainDistanceSum = mutationTrainDistanceSum;
+                    trainCorrect = mutationTrainCorrect;
+
+                    // evaluate the mutation on test
+                    (testDistanceSum, testCorrect) = EvaluateTest(k, trainSamples, testSamples, testSamplesArgmax, trainTestDistanceMatrix);
 
                     // log it
-                    Log(csv, epoch, fails, bestDistanceSum, bestScore, inputWeights);
+                    Log(csv, epoch, fails, trainDistanceSum, trainCorrect, testDistanceSum, testCorrect, inputWeights);
                     continue;
                 }
 
                 // otherwise we need to undo the mutationIndex
-                ModifyInputWeight(trainSamples, inputWeights, distanceMatrix, mutationIndex, oldWeight);
+                ModifyTrainTrainInputWeight(trainSamples, inputWeights, trainTrainDistanceMatrix, mutationIndex, newWeight, oldWeight);
+                ModifyTrainTestInputWeight(trainSamples, testSamples, inputWeights, trainTestDistanceMatrix, mutationIndex, newWeight, oldWeight);
 
                 // increment fails
                 fails++;
