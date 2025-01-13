@@ -39,20 +39,22 @@
         return inputWeights;
     }
 
+    public static float EXPONENT = 1f;
+
     public static float Distance(float[] a, float[] b, float[] w)
     {
         float distance = 0f;
         for (int i = 0; i < a.Length; i++)
         {
-            distance += MathF.Pow(a[i] - b[i], 2) * w[i];
+            distance += MathF.Pow(Math.Abs(a[i] - b[i]), EXPONENT) * w[i];
         }
         return distance;
     }
 
     public static float ReweightDistance(float distance, float a, float b, float oldW, float newW)
     {
-        distance -= MathF.Pow(a - b, 2) * oldW;
-        distance += MathF.Pow(a - b, 2) * newW;
+        distance -= MathF.Pow(Math.Abs(a - b), EXPONENT) * oldW;
+        distance += MathF.Pow(Math.Abs(a - b), EXPONENT) * newW;
         return distance;
     }
 
